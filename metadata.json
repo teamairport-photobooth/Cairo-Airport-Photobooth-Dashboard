@@ -1,0 +1,7 @@
+{
+  "name": "AI Photobooth Dashboard",
+  "description": "A comprehensive dashboard for managing AI-powered photobooth projects, user roles, and generation limits with real-time tracking and simulation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
