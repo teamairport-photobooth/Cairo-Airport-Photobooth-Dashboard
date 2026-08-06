@@ -98,8 +98,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            // 1. Query existing profile
-            const { data: profile, error: profileError } = await supabase
+            const cleanEmail = session.user.email.trim();
+
+            // 1. GATEKEEPER CHECK: Verify email is in allowed_users whitelist (case-insensitive)
+            const { data: allowedUser } = await supabase
+                .from('allowed_users')
+                .select('*')
+                .ilike('email', cleanEmail)
+                .maybeSingle();
+
+            if (!allowedUser) {
+                console.warn('⚠️ Auth: User email not found in allowed_users whitelist:', cleanEmail);
+                // Clean up any stale profile if access was revoked
+                await supabase.from('profiles').delete().eq('id', session.user.id);
+                setUser(null);
+                setLoading(false);
+                return;
+            }
+
+            // 2. Query existing profile
+            const { data: profile } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
@@ -118,49 +136,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            // 2. If profile not found, check if email is in allowed_users whitelist (case-insensitive)
-            console.log('🔍 Auth: Profile missing, checking allowed_users for', session.user.email);
-            const { data: allowedUser } = await supabase
-                .from('allowed_users')
-                .select('*')
-                .ilike('email', session.user.email.trim())
-                .maybeSingle();
+            // 3. If profile doesn't exist yet, auto-provision it using allowedUser role
+            console.log('✨ Auth: User is whitelisted! Provisioning profile...');
+            const newProfileData = {
+                id: session.user.id,
+                email: cleanEmail,
+                full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || cleanEmail,
+                avatar_url: session.user.user_metadata?.avatar_url || null,
+                role: allowedUser.role || UserRole.REGULAR
+            };
 
-            if (allowedUser) {
-                console.log('✨ Auth: User is whitelisted! Provisioning profile...');
-                const newProfileData = {
-                    id: session.user.id,
-                    email: session.user.email,
-                    full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email,
-                    avatar_url: session.user.user_metadata?.avatar_url || null,
-                    role: allowedUser.role || UserRole.REGULAR
-                };
+            const { data: createdProfile, error: createError } = await supabase
+                .from('profiles')
+                .upsert(newProfileData)
+                .select()
+                .single();
 
-                const { data: createdProfile, error: createError } = await supabase
-                    .from('profiles')
-                    .upsert(newProfileData)
-                    .select()
-                    .single();
-
-                if (createdProfile) {
-                    setUser({
-                        id: createdProfile.id,
-                        name: createdProfile.full_name || 'Admin User',
-                        email: createdProfile.email,
-                        role: (createdProfile.role as UserRole) || UserRole.REGULAR,
-                        assignedProjectIds: []
-                    });
-                    console.log('✅ Auth: Auto-provisioned profile successfully for', createdProfile.email);
-                    setLoading(false);
-                    return;
-                } else {
-                    console.error('❌ Auth: Failed to auto-provision profile:', createError);
-                }
+            if (createdProfile) {
+                setUser({
+                    id: createdProfile.id,
+                    name: createdProfile.full_name || 'Admin User',
+                    email: createdProfile.email,
+                    role: (createdProfile.role as UserRole) || UserRole.REGULAR,
+                    assignedProjectIds: []
+                });
+                console.log('✅ Auth: Auto-provisioned profile successfully for', createdProfile.email);
             } else {
-                console.warn('⚠️ Auth: User email not found in allowed_users whitelist:', session.user.email);
+                console.error('❌ Auth: Failed to auto-provision profile:', createError);
+                setUser(null);
             }
-
-            setUser(null);
         } catch (error) {
             console.error('❌ Auth: Profile fetch/provisioning error:', error);
             setUser(null);

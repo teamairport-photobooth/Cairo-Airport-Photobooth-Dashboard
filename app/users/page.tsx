@@ -98,39 +98,34 @@ export default function UserManagementPage() {
     };
 
     const handleDeleteUser = async (email: string, profileId?: string) => {
-        const confirmMsg = profileId
-            ? `Are you sure? This will delete ${email}'s profile and revoke their login access. Projects they created will become ownerless.`
-            : `Are you sure you want to revoke access for ${email}?`;
-
-        if (!confirm(confirmMsg)) return;
+        if (!confirm(`Are you sure you want to revoke access and delete profile for ${email}?`)) return;
 
         setLoading(true);
         try {
+            const cleanEmail = email.toLowerCase().trim();
+
             // 1. Remove from Whitelist
             const { error: wError } = await supabase
                 .from('allowed_users')
                 .delete()
-                .eq('email', email);
+                .ilike('email', cleanEmail);
             if (wError) throw wError;
 
-            // 2. If they have a profile, clean up
+            // 2. Unlink any projects created by this user
             if (profileId) {
-                // Set projects to NULL owner instead of deleting them
                 const { error: pUpdateError } = await supabase
                     .from('projects')
                     .update({ created_by: null })
                     .eq('created_by', profileId);
-
                 if (pUpdateError) console.warn('Could not detach projects:', pUpdateError);
-
-                // Delete the profile
-                const { error: pDeleteError } = await supabase
-                    .from('profiles')
-                    .delete()
-                    .eq('id', profileId);
-
-                if (pDeleteError) throw pDeleteError;
             }
+
+            // 3. Delete profile record matching email
+            const { error: pDeleteError } = await supabase
+                .from('profiles')
+                .delete()
+                .ilike('email', cleanEmail);
+            if (pDeleteError) console.warn('Profile deletion note:', pDeleteError);
 
             fetchData();
         } catch (err: any) {

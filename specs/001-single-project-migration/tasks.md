@@ -30,8 +30,8 @@
 > **Independent Test**: Sign in with Google on local/staging URL, confirm whitelisted user session creation and profile retrieval from new Supabase database.
 
 - [x] T009 [US1] Verify Google OAuth redirect flow and whitelisted profile resolution in [components/AuthContext.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/components/AuthContext.tsx)
-- [ ] T010 [US1] Ensure login page invite-only messaging and redirect handling work in [app/login/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/login/page.tsx)
-- [ ] T010b [US1] Verify email whitelist management interface in [app/users/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/users/page.tsx)
+- [x] T010 [US1] Ensure login page invite-only messaging and redirect handling work in [app/login/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/login/page.tsx)
+- [x] T010b [US1] Verify email whitelist management interface in [app/users/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/users/page.tsx)
 
 ---
 

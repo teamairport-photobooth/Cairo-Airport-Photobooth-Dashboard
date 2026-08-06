@@ -158,6 +158,20 @@ CREATE TRIGGER on_allowed_user_added
     AFTER INSERT OR UPDATE ON public.allowed_users
     FOR EACH ROW EXECUTE FUNCTION public.handle_allowed_user_added();
 
+-- Trigger: If a user is removed from allowed_users, auto-delete their profile
+CREATE OR REPLACE FUNCTION public.handle_allowed_user_removed()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM public.profiles WHERE LOWER(email) = LOWER(OLD.email);
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_allowed_user_removed ON public.allowed_users;
+CREATE TRIGGER on_allowed_user_removed
+    AFTER DELETE ON public.allowed_users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_allowed_user_removed();
+
 -- 9. Initial Seed Data
 INSERT INTO public.projects (
     name, description, status, daily_limit, current_generations, cloudinary_tag
