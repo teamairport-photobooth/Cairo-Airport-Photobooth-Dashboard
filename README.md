@@ -1,6 +1,6 @@
 # Cairo Airport AI Photobooth Dashboard
 
-An administrative and analytics dashboard for managing the Cairo Airport AI Photobooth project, tracking generation quotas, managing project configurations, and inspecting Cloudinary media assets.
+An administrative and analytics dashboard for managing the Cairo Airport AI Photobooth project, tracking cumulative generation usage, managing global configurations, and inspecting Cloudinary media assets.
 
 ---
 
@@ -9,10 +9,10 @@ An administrative and analytics dashboard for managing the Cairo Airport AI Phot
 | Layer | Technology / Package | Description |
 | :--- | :--- | :--- |
 | **Framework** | Next.js 16 (App Router), React 19, TypeScript | Core application framework and routing |
-| **Styling & UI** | Tailwind CSS v3, PostCSS, `clsx`, `tailwind-merge`, Lucide React | Modern responsive UI, dynamic utility styling, and icons |
-| **Backend & Auth** | Supabase (`@supabase/supabase-js`, `@supabase/auth-helpers-nextjs`) | Google OAuth, session management, user profiles, RBAC, and database |
-| **Media Engine** | Cloudinary SDK | Tag-based photobooth image fetching, metadata inspection, and asset management |
-| **Analytics & Data** | Recharts | Interactive graphs for daily generation metrics and project usage logs |
+| **Styling & UI** | Tailwind CSS v3, PostCSS, `clsx`, `tailwind-merge`, Lucide React | Modern responsive UI, minimizable sidebar layout, and icon system |
+| **Backend & Auth** | Supabase (`@supabase/supabase-js`, `@supabase/auth-helpers-nextjs`) | Google OAuth, invite-only email whitelisting (`allowed_users`), user profiles, and database |
+| **Media Engine** | Cloudinary API | Tag-based photobooth image fetching (`cairo-airport-photobooth`), metadata inspection, and asset management |
+| **Analytics & Data** | Recharts & PostgreSQL RPC | Interactive graphs for generation activity trends and atomic total usage counter |
 
 ---
 
@@ -21,31 +21,37 @@ An administrative and analytics dashboard for managing the Cairo Airport AI Phot
 ```mermaid
 flowchart TD
     A[User] -->|Google OAuth Login| B[AuthContext / Supabase Auth]
-    B -->|Fetch Profile & Role| C{User Role}
-    C -->|ADMIN| D[Admin Dashboard & Full Project/User Controls]
-    C -->|REGULAR| E[Assigned Projects & Usage Overview]
+    B -->|Check Whitelist & Profile| C{Authorized Profile?}
+    C -->|Yes| D[Unified Photobooth Console - Dashboard]
+    C -->|No| E[Access Unauthorized Screen]
     
-    D & E --> F[Project Management & Quotas]
-    F -->|Track Generations & Limits| G[Supabase DB / Usage Logs]
-    F -->|Fetch Photobooth Images| H[Cloudinary API]
-    H -->|Render Media & Analytics| I[Recharts Dashboard UI]
+    D --> F[Overview & Analytics]
+    D --> G[Generated Images Gallery]
+    D --> H[API Access Logs - Admin]
+    
+    F -->|Log Events & Atomic Increment| I[Supabase DB / usage_logs]
+    G -->|Fetch Photobooth Media| J[Cloudinary API]
+    F -->|Render Activity Trends| K[Recharts AreaChart]
 ```
 
 ### Key Modules & Workflow
 
 1. **Authentication & Access Control (`components/AuthContext.tsx`)**:
    - Manages user sessions via Supabase Auth with Google OAuth integration.
-   - Enforces Role-Based Access Control (`ADMIN` vs `REGULAR`) and attaches assigned project permissions (`assignedProjectIds`).
+   - Enforces invite-only email whitelisting (`allowed_users` table). Any authorized user automatically gains access to the photobooth console.
+   - Role-based permissions (`ADMIN` vs `REGULAR`).
 
-2. **Project & Quota Tracking (`types.ts`, `store.ts`)**:
-   - Tracks generation limits (`dailyLimit`, `currentGenerations`) and status (`active`, `paused`, `exhausted`).
-   - Associates project-specific Cloudinary credentials (Cloud Name, API Key, Tags).
+2. **Minimizable Navigation & Sidebar (`components/ClientRootLayout.tsx`)**:
+   - Sleek minimizable sidebar layout with smooth collapse/expand transitions.
+   - Menu items: **Dashboard** (`/`), **User Management** (`/users`), **Global Settings** (`/settings`).
 
-3. **Cloudinary Asset Pipeline (`services/cloudinaryService.ts`)**:
-   - Connects to Cloudinary to retrieve tagged photobooth images and metadata (`public_id`, dimensions, format, tags, creation timestamp).
+3. **Unified Photobooth Dashboard (`app/page.tsx`)**:
+   - **Overview & Analytics**: Cumulative Total Generations stat card, Recharts generation activity area chart (7D, 30D, 90D, and custom date range picker), API simulation controls, and Cloudinary settings.
+   - **Generated Images Gallery**: Real-time Cloudinary image feed, sorting (Newest/Oldest), selection mode & bulk download, and detailed image metadata inspection modal.
+   - **API Access Logs**: Real-time generation event log stream (Admin only).
 
-4. **Analytics & Visualization (`app/page.tsx`)**:
-   - Visualizes usage logs and generation trends over time using `Recharts`.
+4. **Generation API (`/api/projects/[id]/generate`)**:
+   - Receives generation events, writes to `usage_logs`, and invokes `increment_project_usage` RPC to update cumulative counts atomically.
 
 ---
 

@@ -37,7 +37,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     const navItems = [
         { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/', roles: [UserRole.ADMIN, UserRole.REGULAR] },
         { label: 'User Management', icon: <Users size={20} />, path: '/users', roles: [UserRole.ADMIN] },
-        { label: 'Global Settings', icon: <Settings size={20} />, path: '/settings', roles: [UserRole.ADMIN] },
+        { label: 'Settings', icon: <Settings size={20} />, path: '/settings', roles: [UserRole.ADMIN] },
     ];
 
     useEffect(() => {
