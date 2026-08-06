@@ -14,11 +14,7 @@ import {
     AlertCircle,
     FolderKanban,
     Trash2,
-    Clock,
-    Copy,
-    Check,
-    ExternalLink,
-    Zap
+    Check
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -46,15 +42,6 @@ export default function SettingsPage() {
     // Storage Cleanup State
     const [isPurging, setIsPurging] = useState(false);
     const [purgeResult, setPurgeResult] = useState<{ success: boolean; message: string; deletedCount?: number } | null>(null);
-    const [copiedUrl, setCopiedUrl] = useState(false);
-    const [copiedHeader, setCopiedHeader] = useState(false);
-    const [origin, setOrigin] = useState('');
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setOrigin(window.location.origin);
-        }
-    }, []);
 
     useEffect(() => {
         if (!isAuthenticated || (user && user.role !== UserRole.ADMIN)) {
@@ -163,7 +150,7 @@ export default function SettingsPage() {
         if (isPurging) return;
 
         const confirmPurge = window.confirm(
-            `Are you sure you want to delete ALL photobooth images matching tag "${projectForm.cloudinaryTag}" from Cloudinary storage?`
+            `Are you sure you want to delete ALL photobooth images in folder "${projectForm.cloudinaryTag}" from Cloudinary storage?`
         );
         if (!confirmPurge) return;
 
@@ -204,21 +191,7 @@ export default function SettingsPage() {
         }
     };
 
-    const copyToClipboard = (text: string, type: 'url' | 'header') => {
-        navigator.clipboard.writeText(text);
-        if (type === 'url') {
-            setCopiedUrl(true);
-            setTimeout(() => setCopiedUrl(false), 2000);
-        } else {
-            setCopiedHeader(true);
-            setTimeout(() => setCopiedHeader(false), 2000);
-        }
-    };
-
     if (!user || user.role !== UserRole.ADMIN) return null;
-
-    const cleanupApiUrl = `${origin}/api/cron/cleanup-cloudinary`;
-    const cronAuthHeader = `Bearer cairo_photobooth_cron_secret_2026`;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto pb-16">
@@ -396,7 +369,7 @@ export default function SettingsPage() {
                         </div>
                     </form>
 
-                    {/* Section 3: Storage Maintenance & Daily Cron Setup */}
+                    {/* Section 3: Storage Maintenance */}
                     <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                         <div className="bg-slate-900 text-white px-8 py-6 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -404,8 +377,8 @@ export default function SettingsPage() {
                                     <Trash2 size={20} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-white text-lg">Storage Maintenance & Cron Setup</h3>
-                                    <p className="text-xs text-slate-400">Purge Cloudinary images and configure free daily scheduled cleanups.</p>
+                                    <h3 className="font-bold text-white text-lg">Storage Maintenance</h3>
+                                    <p className="text-xs text-slate-400">Purge images stored in Cloudinary folder "{projectForm.cloudinaryTag}".</p>
                                 </div>
                             </div>
 
@@ -423,9 +396,8 @@ export default function SettingsPage() {
                             </button>
                         </div>
 
-                        <div className="p-8 space-y-6">
-                            {/* Purge Result Feedback Banner */}
-                            {purgeResult && (
+                        {purgeResult && (
+                            <div className="p-8 border-t border-slate-100">
                                 <div className={`p-4 rounded-2xl border text-sm font-bold flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300 ${
                                     purgeResult.success
                                         ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -441,60 +413,8 @@ export default function SettingsPage() {
                                         </span>
                                     )}
                                 </div>
-                            )}
-
-                            {/* External Cron Setup Instructions */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                        <Clock size={16} className="text-indigo-600" />
-                                        Setup Automated Scheduled Cron (cron-jobs.org)
-                                    </h4>
-                                    <a
-                                        href="https://cron-jobs.org"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:underline"
-                                    >
-                                        Visit cron-jobs.org (Free) <ExternalLink size={12} />
-                                    </a>
-                                </div>
-
-                                <p className="text-xs text-slate-500 leading-relaxed">
-                                    You can schedule an automated cleanup job (1x, 2x, or 3x daily for free) on <strong className="text-slate-700">cron-jobs.org</strong> or any external cron service using the parameters below:
-                                </p>
-
-                                <div className="space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Endpoint URL</label>
-                                        <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-slate-200">
-                                            <code className="text-indigo-600 text-xs font-mono flex-1 truncate">{cleanupApiUrl}</code>
-                                            <button
-                                                onClick={() => copyToClipboard(cleanupApiUrl, 'url')}
-                                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                                                title="Copy URL"
-                                            >
-                                                {copiedUrl ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Authorization Header</label>
-                                        <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-slate-200">
-                                            <code className="text-slate-700 text-xs font-mono flex-1 truncate">Authorization: {cronAuthHeader}</code>
-                                            <button
-                                                onClick={() => copyToClipboard(cronAuthHeader, 'header')}
-                                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                                                title="Copy Header"
-                                            >
-                                                {copiedHeader ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}

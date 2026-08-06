@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/utils/supabase';
-import { deleteCloudinaryImagesByTag } from '@/services/cloudinaryService';
+import { deleteCloudinaryFolderImages } from '@/services/cloudinaryService';
 
-const EXPECTED_CRON_SECRET = process.env.CRON_SECRET || 'cairo_photobooth_cron_secret_2026';
-
-async function handleCleanup(req: NextRequest) {
+export async function handleCleanup(req: NextRequest) {
     try {
+        const cronSecret = process.env.CRON_SECRET;
+
         // 1. Authorization Guard
         const authHeader = req.headers.get('authorization');
         const url = new URL(req.url);
@@ -13,12 +13,16 @@ async function handleCleanup(req: NextRequest) {
 
         let isAuthorized = false;
 
-        if (authHeader && authHeader.toLowerCase() === `bearer ${EXPECTED_CRON_SECRET.toLowerCase()}`) {
-            isAuthorized = true;
-        } else if (queryKey && queryKey === EXPECTED_CRON_SECRET) {
-            isAuthorized = true;
-        } else {
-            // Check for active Supabase Admin session header if invoked internally
+        if (cronSecret) {
+            if (authHeader && authHeader.toLowerCase() === `bearer ${cronSecret.toLowerCase()}`) {
+                isAuthorized = true;
+            } else if (queryKey && queryKey === cronSecret) {
+                isAuthorized = true;
+            }
+        }
+
+        // Check for active Supabase Admin session header if invoked internally from dashboard UI
+        if (!isAuthorized) {
             const token = req.headers.get('x-supabase-auth');
             if (token) {
                 const { data: { user } } = await supabase.auth.getUser(token);
@@ -43,7 +47,7 @@ async function handleCleanup(req: NextRequest) {
             );
         }
 
-        // 2. Fetch Credentials & Tag from Supabase
+        // 2. Fetch Credentials & Folder Tag from Supabase
         const { data: globalSettings, error: gError } = await supabase
             .from('global_settings')
             .select('*')
@@ -62,7 +66,7 @@ async function handleCleanup(req: NextRequest) {
         const cloudName = globalSettings?.cloudinary_cloud_name || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
         const apiKey = globalSettings?.cloudinary_api_key || process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
         const apiSecret = globalSettings?.cloudinary_api_secret || process.env.CLOUDINARY_API_SECRET;
-        const tag = (projectsData && projectsData.length > 0 && projectsData[0].cloudinary_tag) || 'cairo-airport-photobooth';
+        const folderName = (projectsData && projectsData.length > 0 && projectsData[0].cloudinary_tag) || 'cairo-airport-photobooth';
 
         if (!cloudName || !apiKey || !apiSecret) {
             return NextResponse.json(
@@ -71,14 +75,14 @@ async function handleCleanup(req: NextRequest) {
             );
         }
 
-        // 3. Perform Bulk Image Purge
-        const deletedCount = await deleteCloudinaryImagesByTag(cloudName, apiKey, apiSecret, tag);
+        // 3. Perform Bulk Image Purge by Folder Prefix
+        const deletedCount = await deleteCloudinaryFolderImages(cloudName, apiKey, apiSecret, folderName);
 
         return NextResponse.json({
             success: true,
-            message: `Successfully purged Cloudinary storage for tag "${tag}".`,
+            message: `Successfully cleared Cloudinary storage folder "${folderName}".`,
             deletedCount,
-            tag,
+            folder: folderName,
             timestamp: new Date().toISOString()
         });
     } catch (err: any) {
