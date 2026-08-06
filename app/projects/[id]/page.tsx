@@ -789,127 +789,43 @@ export default function ProjectDetailPage() {
                             )}
                         </div>
 
-                        {/* Sidebar: Team Members & Settings */}
-                        {user.role === UserRole.ADMIN && (
-                            <div className="space-y-6">
-                                <div className="bg-white border border-slate-200 rounded-2xl p-6">
-                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-                                        <Users size={18} className="text-indigo-500" />
-                                        Team Members
+                        {/* Sidebar: Settings */}
+                        <div className="space-y-6">
+                            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <Settings size={18} className="text-slate-400" />
+                                        Project Settings
                                     </h3>
-
-                                    <div className="space-y-3 mb-6">
-                                        {members.map(member => (
-                                            <div key={member.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-xs font-bold text-indigo-600">
-                                                        {member.avatar_url ? <img src={member.avatar_url} className="w-full h-full rounded-full" /> : member.full_name?.charAt(0)}
-                                                    </div>
-                                                    <div className="overflow-hidden">
-                                                        <p className="text-sm font-bold text-slate-800 truncate">{member.full_name}</p>
-                                                        <p className="text-[10px] text-slate-500 truncate">{member.email}</p>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleRemoveMember(member.memberId)}
-                                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <UserMinus size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {members.length === 0 && (
-                                            <div className="py-6 text-center text-slate-400">
-                                                <p className="text-sm font-medium">No members assigned yet</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="pt-4 border-t border-slate-100">
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Add Member</label>
-                                        <div className="relative mb-3">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                            <input
-                                                placeholder="Search active users..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                            />
-                                        </div>
-
-                                        {searchQuery && (
-                                            <div className="max-h-40 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-50">
-                                                {allProfiles
-                                                    .filter(p => {
-                                                        const name = (p.full_name || '').toLowerCase();
-                                                        const email = (p.email || '').toLowerCase();
-                                                        const q = searchQuery.toLowerCase();
-                                                        return name.includes(q) || email.includes(q);
-                                                    })
-                                                    .filter(p => !members.find(m => m.id === p.id))
-                                                    .map(profile => (
-                                                        <button
-                                                            key={profile.id}
-                                                            onClick={() => {
-                                                                handleAddMember(profile.id);
-                                                                setSearchQuery('');
-                                                            }}
-                                                            className="w-full flex items-center justify-between p-3 hover:bg-slate-50 text-left transition-colors"
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
-                                                                    {profile.full_name?.charAt(0) || profile.email?.charAt(0)}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-sm font-bold text-slate-800">{profile.full_name || 'New User'}</p>
-                                                                    <p className="text-[10px] text-slate-500">{profile.email}</p>
-                                                                </div>
-                                                            </div>
-                                                            <UserPlus size={16} className="text-indigo-500" />
-                                                        </button>
-                                                    ))
-                                                }
-                                            </div>
-                                        )}
-                                    </div>
+                                    <button
+                                        onClick={() => setShowEditModal(true)}
+                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg transition-colors"
+                                    >
+                                        Edit
+                                    </button>
                                 </div>
-
-                                <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                            <Settings size={18} className="text-slate-400" />
-                                            Project Settings
-                                        </h3>
-                                        <button
-                                            onClick={() => setShowEditModal(true)}
-                                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg transition-colors"
-                                        >
-                                            Edit
-                                        </button>
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Cloudinary Cloud</p>
+                                        <p className="font-medium text-slate-700">{project.cloudinaryCloudName || 'Managed via Global Settings'}</p>
                                     </div>
-                                    <div className="space-y-4">
-                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Cloudinary Cloud</p>
-                                            <p className="font-medium text-slate-700">{project.cloudinaryCloudName || 'Managed via Global Settings'}</p>
-                                        </div>
-                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Tag / Folder Path</p>
-                                            <p className="font-medium text-slate-700">{project.cloudinaryTag || 'Not set'}</p>
-                                        </div>
-                                        <div className="pt-4 border-t border-slate-100">
-                                            <button
-                                                onClick={handleDeleteProject}
-                                                disabled={isDeleting}
-                                                className="w-full py-2 flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors font-medium disabled:opacity-50"
-                                            >
-                                                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                                {isDeleting ? 'Deleting...' : 'Delete Project'}
-                                            </button>
-                                        </div>
+                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Tag / Folder Path</p>
+                                        <p className="font-medium text-slate-700">{project.cloudinaryTag || 'Not set'}</p>
+                                    </div>
+                                    <div className="pt-4 border-t border-slate-100">
+                                        <button
+                                            onClick={handleDeleteProject}
+                                            disabled={isDeleting}
+                                            className="w-full py-2 flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors font-medium disabled:opacity-50"
+                                        >
+                                            {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                            {isDeleting ? 'Deleting...' : 'Delete Project'}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
 

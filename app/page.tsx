@@ -18,10 +18,6 @@ import {
     Download,
     Info,
     Loader2,
-    Users,
-    UserPlus,
-    UserMinus,
-    Search,
     Calendar,
     ArrowUpDown,
     X
@@ -53,9 +49,6 @@ export default function DashboardPage() {
     const [mounted, setMounted] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
-    const [members, setMembers] = useState<any[]>([]);
-    const [allProfiles, setAllProfiles] = useState<any[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
     const [timeRange, setTimeRange] = useState<number | 'custom'>(7);
     const [customRange, setCustomRange] = useState({
         start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -160,11 +153,6 @@ export default function DashboardPage() {
                 if (mapped.cloudinaryTag) {
                     fetchImages(mapped.cloudinaryTag, mapped, false);
                 }
-
-                fetchMembers(p.id);
-                if (user?.role === UserRole.ADMIN) {
-                    fetchAllProfiles();
-                }
             } else {
                 // Fallback project object
                 const fallback: Project = {
@@ -182,66 +170,6 @@ export default function DashboardPage() {
             console.error('Error fetching project:', err);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const fetchMembers = async (projectId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from('project_members')
-                .select('id, user_id, profiles(id, full_name, email, avatar_url, role)')
-                .eq('project_id', projectId);
-
-            if (error) throw error;
-            setMembers((data || []).map((m: any) => ({
-                memberId: m.id,
-                ...m.profiles
-            })));
-        } catch (err) {
-            console.error('Error fetching members:', err);
-        }
-    };
-
-    const fetchAllProfiles = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('full_name', { ascending: true });
-
-            if (error) throw error;
-            setAllProfiles(data || []);
-        } catch (err) {
-            console.error('Error fetching profiles:', err);
-        }
-    };
-
-    const handleAddMember = async (userId: string) => {
-        if (!project) return;
-        try {
-            const { error } = await supabase
-                .from('project_members')
-                .insert([{ project_id: project.id, user_id: userId }]);
-
-            if (error) throw error;
-            fetchMembers(project.id);
-        } catch (err: any) {
-            alert(`Could not add member: ${err.message}`);
-        }
-    };
-
-    const handleRemoveMember = async (memberTableId: string) => {
-        if (!project) return;
-        try {
-            const { error } = await supabase
-                .from('project_members')
-                .delete()
-                .eq('id', memberTableId);
-
-            if (error) throw error;
-            fetchMembers(project.id);
-        } catch (err: any) {
-            alert(`Could not remove member: ${err.message}`);
         }
     };
 
@@ -311,7 +239,7 @@ export default function DashboardPage() {
             setShowEditModal(false);
         } catch (err) {
             console.error('Update error:', err);
-            alert('Failed to update project');
+            alert('Failed to update project settings.');
         }
     };
 
@@ -338,7 +266,7 @@ export default function DashboardPage() {
             await fetchProjectData();
         } catch (err) {
             console.error('Simulation error:', err);
-            alert('Simulation failed. Did you execute the increment_project_usage database RPC?');
+            alert('Simulation failed. Please try again.');
         } finally {
             setIsSimulating(false);
         }
@@ -488,7 +416,7 @@ export default function DashboardPage() {
             <div className="min-h-[500px] bg-slate-50 flex items-center justify-center rounded-3xl">
                 <div className="flex flex-col items-center gap-4">
                     <Zap className="animate-pulse text-indigo-600" size={48} fill="currentColor" />
-                    <p className="text-slate-500 font-medium animate-pulse">Loading Photobooth Console...</p>
+                    <p className="text-slate-500 font-medium animate-pulse">Loading Console...</p>
                 </div>
             </div>
         );
@@ -505,7 +433,7 @@ export default function DashboardPage() {
                     <div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-500/30">
                             <Zap size={14} fill="currentColor" />
-                            Single-Project Scope
+                            Cairo International Airport
                         </div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">{project.name}</h1>
                         <p className="text-slate-400 text-sm md:text-base mt-2 max-w-xl leading-relaxed">{project.description}</p>
@@ -557,8 +485,8 @@ export default function DashboardPage() {
 
             {/* Overview & Analytics Tab */}
             {activeTab === 'overview' && (
-                <div className={`grid grid-cols-1 ${user.role === UserRole.ADMIN ? 'lg:grid-cols-3' : 'max-w-4xl mx-auto'} gap-8`}>
-                    <div className={user.role === UserRole.ADMIN ? 'lg:col-span-2 space-y-8' : 'space-y-8'}>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
                         {/* Total Usage Stat Card */}
                         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-5">
@@ -573,7 +501,7 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                             </div>
-                            <p className="text-xs text-slate-400 mt-4">Continuous generation enabled with no capacity limits</p>
+                            <p className="text-xs text-slate-400 mt-4">Continuous active operation</p>
                         </div>
 
                         {/* Generations Analytics Chart */}
@@ -688,117 +616,35 @@ export default function DashboardPage() {
                         )}
                     </div>
 
-                    {/* Sidebar Column: Team Members & Settings */}
-                    {user.role === UserRole.ADMIN && (
-                        <div className="space-y-6">
-                            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-                                    <Users size={18} className="text-indigo-500" />
-                                    Team Members
+                    {/* Sidebar Column: Settings */}
+                    <div className="space-y-6">
+                        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-6 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                    <Settings size={18} className="text-slate-400" />
+                                    Photobooth Configuration
                                 </h3>
-
-                                <div className="space-y-3 mb-6">
-                                    {members.map(member => (
-                                        <div key={member.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-xs font-bold text-indigo-600">
-                                                    {member.avatar_url ? <img src={member.avatar_url} className="w-full h-full rounded-full" /> : member.full_name?.charAt(0)}
-                                                </div>
-                                                <div className="overflow-hidden">
-                                                    <p className="text-sm font-bold text-slate-800 truncate">{member.full_name}</p>
-                                                    <p className="text-[10px] text-slate-500 truncate">{member.email}</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleRemoveMember(member.memberId)}
-                                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                            >
-                                                <UserMinus size={14} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    {members.length === 0 && (
-                                        <div className="py-6 text-center text-slate-400">
-                                            <p className="text-sm font-medium">No members assigned yet</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="pt-4 border-t border-slate-100">
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Add Member</label>
-                                    <div className="relative mb-3">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                        <input
-                                            placeholder="Search active users..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                        />
-                                    </div>
-
-                                    {searchQuery && (
-                                        <div className="max-h-40 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-50">
-                                            {allProfiles
-                                                .filter(p => {
-                                                    const name = (p.full_name || '').toLowerCase();
-                                                    const email = (p.email || '').toLowerCase();
-                                                    const q = searchQuery.toLowerCase();
-                                                    return name.includes(q) || email.includes(q);
-                                                })
-                                                .filter(p => !members.find(m => m.id === p.id))
-                                                .map(profile => (
-                                                    <button
-                                                        key={profile.id}
-                                                        onClick={() => {
-                                                            handleAddMember(profile.id);
-                                                            setSearchQuery('');
-                                                        }}
-                                                        className="w-full flex items-center justify-between p-3 hover:bg-slate-50 text-left transition-colors"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
-                                                                {profile.full_name?.charAt(0) || profile.email?.charAt(0)}
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-slate-800">{profile.full_name || 'New User'}</p>
-                                                                <p className="text-[10px] text-slate-500">{profile.email}</p>
-                                                            </div>
-                                                        </div>
-                                                        <UserPlus size={16} className="text-indigo-500" />
-                                                    </button>
-                                                ))
-                                            }
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-6 shadow-sm">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <Settings size={18} className="text-slate-400" />
-                                        Project Settings
-                                    </h3>
+                                {user.role === UserRole.ADMIN && (
                                     <button
                                         onClick={() => setShowEditModal(true)}
                                         className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg transition-colors"
                                     >
                                         Edit
                                     </button>
+                                )}
+                            </div>
+                            <div className="space-y-4">
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-xs font-bold text-slate-400 uppercase mb-2">Cloudinary Cloud</p>
+                                    <p className="font-medium text-slate-700">{project.cloudinaryCloudName || 'Managed via Global Settings'}</p>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Cloudinary Cloud</p>
-                                        <p className="font-medium text-slate-700">{project.cloudinaryCloudName || 'Managed via Global Settings'}</p>
-                                    </div>
-                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Tag / Folder Path</p>
-                                        <p className="font-medium text-slate-700">{project.cloudinaryTag || 'Not set'}</p>
-                                    </div>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-xs font-bold text-slate-400 uppercase mb-2">Tag / Folder Path</p>
+                                    <p className="font-medium text-slate-700">{project.cloudinaryTag || 'Not set'}</p>
                                 </div>
                             </div>
                         </div>
-                    )}
+                    </div>
                 </div>
             )}
 
@@ -871,7 +717,7 @@ export default function DashboardPage() {
                             </div>
                             <h4 className="text-lg font-bold text-slate-800">Cloudinary Not Configured</h4>
                             <p className="text-slate-500 max-w-sm mt-2">
-                                Please set a Cloud Name and Tag in the project settings to fetch photos from your Cloudinary account.
+                                Please set a Cloud Name and Tag in settings to fetch photos from your Cloudinary account.
                             </p>
                         </div>
                     ) : loadingImages ? (
@@ -1027,13 +873,13 @@ export default function DashboardPage() {
                         className="bg-white w-full max-w-xl rounded-2xl p-8 animate-in zoom-in-95 duration-200 my-8 shadow-2xl relative"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-bold text-slate-800 mb-6">Edit Project</h2>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-6">Edit Configuration</h2>
                         <form onSubmit={handleUpdateProject} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Basic Information</h3>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
                                         <input
                                             required
                                             type="text"
