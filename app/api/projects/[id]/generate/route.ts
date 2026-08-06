@@ -34,7 +34,7 @@ export async function POST(
         const amount = 1;
         const supabase = getAdminClient();
 
-        // 1. Create a log entry
+        // 1. Create a log entry in usage_logs
         const { error: logError } = await supabase
             .from('usage_logs')
             .insert([{ project_id: id, amount }]);
@@ -62,7 +62,7 @@ export async function POST(
         console.error('API Generation Error:', error);
         return NextResponse.json({
             success: false,
-            message: error.message || 'Failed to increment generation count'
+            message: error.message || 'Failed to record generation event'
         }, {
             status: 500,
             headers: corsHeaders

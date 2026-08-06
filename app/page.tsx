@@ -1,333 +1,247 @@
-
 'use client';
 
-import React, { useMemo } from 'react';
-import { Project, UserRole, UsageLog } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { Project } from '@/types';
 import { supabase } from '@/utils/supabase';
 import {
-    TrendingUp,
-    FolderKanban,
-    Users,
     Zap,
     AlertCircle,
-    ArrowUpRight,
-    ArrowDownRight,
-    Calendar
+    ArrowRight,
+    Loader2,
+    Image as ImageIcon,
+    Power,
+    CheckCircle2,
+    PauseCircle,
+    Activity
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import Link from 'next/link';
 import { useAuth } from '@/components/AuthContext';
 
 export default function DashboardPage() {
     const { user } = useAuth();
+    const [project, setProject] = useState<Project | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isUpdating, setIsUpdating] = useState(false);
 
-    const [allProjects, setAllProjects] = React.useState<Project[]>([]);
-    const [allUsers, setAllUsers] = React.useState<any[]>([]);
-    const [usageLogs, setUsageLogs] = React.useState<UsageLog[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [timeRange, setTimeRange] = React.useState<number | 'custom'>(7);
-    const [customRange, setCustomRange] = React.useState({
-        start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0]
-    });
-
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
-            fetchDashboardData();
+            fetchSingleProject();
         }
-    }, [user, timeRange, customRange.start, customRange.end]);
+    }, [user]);
 
-    const fetchDashboardData = async () => {
+    const fetchSingleProject = async () => {
         setIsLoading(true);
         try {
-            // 1. Fetch Projects
-            let projectsQuery = supabase.from('projects').select('*');
-
-            if (user?.role !== UserRole.ADMIN) {
-                const { data: memberProjects } = await supabase
-                    .from('project_members')
-                    .select('project_id')
-                    .eq('user_id', user?.id);
-
-                const memberIds = (memberProjects || []).map(m => m.project_id);
-                projectsQuery = projectsQuery.or(`created_by.eq.${user?.id},id.in.(${memberIds.length ? memberIds.join(',') : '00000000-0000-0000-0000-000000000000'})`);
-            }
-
-            const { data: projectsData } = await projectsQuery;
-
-            const mappedProjects: Project[] = (projectsData || []).map(p => ({
-                id: p.id,
-                name: p.name,
-                description: p.description || '',
-                dailyLimit: p.max_usage || 0,
-                currentGenerations: p.total_usage || 0,
-                status: p.is_active ? ((p.total_usage || 0) >= (p.max_usage || 0) ? 'exhausted' : 'active') : 'paused',
-                createdAt: p.created_at || '',
-                ownerId: p.created_by || ''
-            }));
-            setAllProjects(mappedProjects);
-
-            // 2. Fetch Profiles for Admin
-            if (user?.role === UserRole.ADMIN) {
-                const { data: profilesData } = await supabase.from('profiles').select('id');
-                setAllUsers(profilesData || []);
-            }
-
-            // 3. Usage Logs based on timeRange
-            let beginDate: Date;
-            let finalDate: Date = new Date();
-
-            if (timeRange === 'custom') {
-                beginDate = new Date(customRange.start);
-                finalDate = new Date(customRange.end);
-                finalDate.setHours(23, 59, 59, 999);
-            } else {
-                beginDate = new Date();
-                beginDate.setDate(beginDate.getDate() - timeRange);
-            }
-
-            let logsQuery = supabase
-                .from('usage_logs')
+            const { data: projectsData, error } = await supabase
+                .from('projects')
                 .select('*')
-                .gte('timestamp', beginDate.toISOString())
-                .lte('timestamp', finalDate.toISOString());
+                .limit(1);
 
-            if (user?.role !== UserRole.ADMIN) {
-                const projectIds = mappedProjects.map(p => p.id);
-                if (projectIds.length > 0) {
-                    logsQuery = logsQuery.in('project_id', projectIds);
-                } else {
-                    logsQuery = logsQuery.eq('project_id', '00000000-0000-0000-0000-000000000000');
-                }
+            if (error) throw error;
+
+            if (projectsData && projectsData.length > 0) {
+                const p = projectsData[0];
+                const mapped: Project = {
+                    id: p.id,
+                    name: p.name,
+                    description: p.description || '',
+                    totalUsage: p.total_usage || 0,
+                    status: p.is_active ? 'active' : 'paused',
+                    is_active: p.is_active ?? true,
+                    createdAt: p.created_at || '',
+                    ownerId: p.created_by || '',
+                    cloudinaryTag: p.cloudinary_tag || 'cairo-airport-photobooth'
+                };
+                setProject(mapped);
+            } else {
+                const fallback: Project = {
+                    id: 'cairo-airport-photobooth',
+                    name: 'Cairo Airport AI Photobooth',
+                    description: 'Main AI Photobooth instance at Cairo International Airport',
+                    totalUsage: 0,
+                    status: 'active',
+                    is_active: true,
+                    createdAt: new Date().toISOString(),
+                    ownerId: user?.id || 'system',
+                    cloudinaryTag: 'cairo-airport-photobooth'
+                };
+                setProject(fallback);
             }
-
-            const { data: logsData } = await logsQuery;
-            setUsageLogs((logsData || []).map(l => ({
-                id: l.id,
-                projectId: l.project_id,
-                timestamp: l.timestamp,
-                amount: l.amount
-            })));
-
         } catch (err) {
-            console.error('Error fetching dashboard data:', err);
+            console.error('Error fetching single project:', err);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const projects = allProjects;
+    const handleToggleStatus = async () => {
+        if (!project) return;
+        setIsUpdating(true);
 
-    const stats = useMemo(() => {
-        const totalGen = projects.reduce((acc, curr) => acc + curr.currentGenerations, 0);
-        const totalLimit = projects.reduce((acc, curr) => acc + curr.dailyLimit, 0);
-        const usagePercent = totalLimit > 0 ? (totalGen / totalLimit) * 100 : 0;
+        try {
+            const nextIsActive = !project.is_active;
+            const nextStatus = nextIsActive ? 'active' : 'paused';
 
-        return [
-            {
-                label: 'Active Projects',
-                value: projects.length,
-                icon: <FolderKanban className="text-indigo-600" />,
-                trend: '+2',
-                isUp: true,
-                bgColor: 'bg-indigo-50'
-            },
-            {
-                label: 'Total Generations',
-                value: totalGen.toLocaleString(),
-                icon: <Zap className="text-amber-600" />,
-                trend: '+12%',
-                isUp: true,
-                bgColor: 'bg-amber-50'
-            },
-            {
-                label: 'Capacity Usage',
-                value: `${usagePercent.toFixed(1)}%`,
-                icon: <TrendingUp className="text-emerald-600" />,
-                trend: '-3%',
-                isUp: false,
-                bgColor: 'bg-emerald-50'
-            },
-            {
-                label: 'Total Users',
-                value: allUsers.length,
-                icon: <Users className="text-blue-600" />,
-                trend: '+0',
-                isUp: true,
-                bgColor: 'bg-blue-50'
-            }
-        ];
-    }, [projects, allUsers]);
+            const { error } = await supabase
+                .from('projects')
+                .update({
+                    is_active: nextIsActive,
+                    status: nextStatus
+                })
+                .eq('id', project.id);
 
-    const chartData = useMemo(() => {
-        const lastDays = [];
+            if (error) throw error;
 
-        let start: Date;
-        let end: Date = new Date();
-        let daysCount: number;
-
-        if (timeRange === 'custom') {
-            start = new Date(customRange.start);
-            end = new Date(customRange.end);
-            daysCount = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-        } else {
-            daysCount = timeRange;
-            start = new Date();
-            start.setDate(start.getDate() - (daysCount - 1));
+            setProject(prev => prev ? {
+                ...prev,
+                is_active: nextIsActive,
+                status: nextStatus
+            } : null);
+        } catch (err: any) {
+            console.error('Error updating project status:', err);
+            alert(`Failed to update project status: ${err.message}`);
+        } finally {
+            setIsUpdating(false);
         }
-
-        for (let i = 0; i < daysCount; i++) {
-            const d = new Date(start);
-            d.setDate(d.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0];
-
-            let label = d.toLocaleDateString(undefined, { weekday: 'short' });
-            if (daysCount > 14) {
-                label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            }
-
-            lastDays.push({
-                name: label,
-                dateStr: dateStr,
-                count: 0
-            });
-        }
-
-        usageLogs.forEach(log => {
-            const logDate = log.timestamp.split('T')[0];
-            const dayEntry = lastDays.find(d => d.dateStr === logDate);
-            if (dayEntry) {
-                dayEntry.count += log.amount;
-            }
-        });
-
-        return lastDays;
-    }, [usageLogs, timeRange, customRange]);
+    };
 
     if (!user) return null;
+
     if (isLoading) {
         return (
             <div className="min-h-[400px] flex flex-col items-center justify-center gap-4">
                 <Zap className="animate-pulse text-indigo-600" size={48} />
-                <p className="text-slate-500 font-medium animate-pulse">Loading dashboard data...</p>
+                <p className="text-slate-500 font-medium animate-pulse">Loading Photobooth Console...</p>
+            </div>
+        );
+    }
+
+    if (!project) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-200">
+                <AlertCircle size={48} className="text-slate-400 mb-4" />
+                <h3 className="text-xl font-bold text-slate-800">No Photobooth Project Found</h3>
+                <p className="text-slate-500 text-sm mt-1">Please ensure the database seed script was executed.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, i) => (
-                    <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 hover:shadow-lg transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                                {stat.icon}
-                            </div>
-                            <div className={`flex items-center text-xs font-bold ${stat.isUp ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {stat.trend}
-                                {stat.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                            </div>
+        <div className="space-y-8 animate-in fade-in duration-500 max-w-5xl mx-auto">
+            {/* Header Banner */}
+            <div className="bg-slate-900 rounded-3xl p-8 md:p-10 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute -right-10 -bottom-10 opacity-10 text-indigo-400 pointer-events-none">
+                    <Zap size={240} />
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-500/30">
+                            <Zap size={14} fill="currentColor" />
+                            Photobooth Dashboard
                         </div>
-                        <h3 className="text-slate-500 text-sm font-medium">{stat.label}</h3>
-                        <p className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</p>
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">{project.name}</h1>
+                        <p className="text-slate-400 text-sm md:text-base mt-2 max-w-xl leading-relaxed">{project.description}</p>
                     </div>
-                ))}
+
+                    <div className="flex flex-col items-start md:items-end gap-3">
+                        <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${
+                            project.is_active
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                            <div className={`w-2 h-2 rounded-full ${project.is_active ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`} />
+                            {project.is_active ? 'Active' : 'Paused'}
+                        </span>
+                        <p className="text-xs text-slate-400 font-mono">
+                            Tag: <span className="text-indigo-300 font-bold">#{project.cloudinaryTag}</span>
+                        </p>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200">
-                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
-                        <h3 className="text-lg font-bold text-slate-800">Generations Activity</h3>
-                        <div className="flex flex-wrap items-center gap-3">
-                            {timeRange === 'custom' && (
-                                <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100 animate-in fade-in slide-in-from-right-2 duration-300">
-                                    <input
-                                        type="date"
-                                        value={customRange.start}
-                                        onChange={(e) => setCustomRange(prev => ({ ...prev, start: e.target.value }))}
-                                        className="bg-transparent text-[10px] font-bold text-slate-600 outline-none px-2"
-                                    />
-                                    <span className="text-slate-300">-</span>
-                                    <input
-                                        type="date"
-                                        value={customRange.end}
-                                        onChange={(e) => setCustomRange(prev => ({ ...prev, end: e.target.value }))}
-                                        className="bg-transparent text-[10px] font-bold text-slate-600 outline-none px-2"
-                                    />
-                                </div>
-                            )}
-                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                                {[7, 30, 90].map((range) => (
-                                    <button
-                                        key={range}
-                                        onClick={() => setTimeRange(range as number)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeRange === range ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                    >
-                                        {range === 7 ? '7D' : range === 30 ? '30D' : '90D'}
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={() => setTimeRange('custom')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeRange === 'custom' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    Custom
-                                </button>
-                                <div className="w-[1px] h-4 bg-slate-200 mx-1" />
-                                <div className="flex items-center gap-1 px-2 text-slate-400">
-                                    <Calendar size={14} />
-                                    <span className="text-[10px] font-bold uppercase">Range</span>
-                                </div>
-                            </div>
+            {/* Total Usage Stat & Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Total Usage Counter Card */}
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                            <Activity size={24} />
                         </div>
-                    </div>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData}>
-                                <defs>
-                                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Area type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Generations</p>
+                        <h2 className="text-4xl font-black text-slate-800">
+                            {(project.totalUsage || 0).toLocaleString()}
+                        </h2>
+                        <p className="text-slate-500 text-xs mt-2">Unlimited photobooth capacity</p>
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6">Recent Projects</h3>
-                    <div className="space-y-4 flex-1">
-                        {projects.slice(0, 5).map(p => (
-                            <div key={p.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-2 h-2 rounded-full ${p.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">{p.name}</p>
-                                        <p className="text-xs text-slate-500">{p.currentGenerations} / {p.dailyLimit} gen</p>
-                                    </div>
-                                </div>
-                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-indigo-500"
-                                        style={{ width: `${Math.min(100, (p.currentGenerations / p.dailyLimit) * 100)}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                        {projects.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                                <AlertCircle size={40} className="mb-2 opacity-20" />
-                                <p>No projects found</p>
-                            </div>
-                        )}
+                {/* Status Toggle Card */}
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between md:col-span-2">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <Power className="text-indigo-600" size={22} />
+                            <h2 className="text-xl font-bold text-slate-800">Operational Status</h2>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {project.is_active ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold">
+                                    <CheckCircle2 size={14} /> Active
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold">
+                                    <PauseCircle size={14} /> Paused
+                                </span>
+                            )}
+                        </div>
                     </div>
+
+                    <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                        {project.is_active
+                            ? 'The photobooth is actively generating images. Click below to temporarily pause operations.'
+                            : 'The photobooth is currently paused. Live requests will be rejected until re-activated.'}
+                    </p>
+
+                    <button
+                        onClick={handleToggleStatus}
+                        disabled={isUpdating}
+                        className={`w-full py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center justify-center gap-3 shadow-lg ${
+                            project.is_active
+                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100'
+                        }`}
+                    >
+                        {isUpdating ? (
+                            <Loader2 className="animate-spin" size={18} />
+                        ) : (
+                            <Power size={18} />
+                        )}
+                        {project.is_active ? 'Pause Photobooth' : 'Activate Photobooth'}
+                    </button>
                 </div>
+            </div>
+
+            {/* Direct Gallery Link Banner */}
+            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+                <div className="absolute right-0 top-0 opacity-10 p-6 pointer-events-none">
+                    <ImageIcon size={200} />
+                </div>
+                <div className="relative z-10 max-w-xl">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm">
+                        <ImageIcon size={24} className="text-white" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-1">Photobooth Media Gallery & Usage Analytics</h2>
+                    <p className="text-indigo-100 text-sm leading-relaxed">
+                        Inspect live generated images, view historical generation charts, and manage featured gallery photos.
+                    </p>
+                </div>
+
+                <Link
+                    href={`/projects/${project.id}`}
+                    className="relative z-10 inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-indigo-600 rounded-2xl font-bold hover:bg-indigo-50 transition-all shadow-lg active:scale-95 text-sm shrink-0"
+                >
+                    Open Photobooth Gallery
+                    <ArrowRight size={18} />
+                </Link>
             </div>
         </div>
     );

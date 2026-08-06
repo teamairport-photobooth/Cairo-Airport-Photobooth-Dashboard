@@ -24,10 +24,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     description TEXT,
-    status TEXT NOT NULL DEFAULT 'active', -- 'active', 'paused', 'exhausted'
-    daily_limit INT NOT NULL DEFAULT 500,
-    current_generations INT NOT NULL DEFAULT 0,
-    max_usage INT DEFAULT 500,
+    status TEXT NOT NULL DEFAULT 'active', -- 'active', 'paused'
     total_usage INT DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     cloudinary_cloud_name TEXT,
@@ -85,11 +82,25 @@ DROP POLICY IF EXISTS "Public update projects" ON public.projects;
 DROP POLICY IF EXISTS "Public insert projects" ON public.projects;
 DROP POLICY IF EXISTS "Public settings read" ON public.global_settings;
 DROP POLICY IF EXISTS "Public settings update" ON public.global_settings;
+DROP POLICY IF EXISTS "Public read usage_logs" ON public.usage_logs;
+DROP POLICY IF EXISTS "Public insert usage_logs" ON public.usage_logs;
 CREATE POLICY "Public read projects" ON public.projects FOR SELECT USING (true);
 CREATE POLICY "Public update projects" ON public.projects FOR UPDATE USING (true);
 CREATE POLICY "Public insert projects" ON public.projects FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public read usage_logs" ON public.usage_logs FOR SELECT USING (true);
+CREATE POLICY "Public insert usage_logs" ON public.usage_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public settings read" ON public.global_settings FOR SELECT USING (true);
 CREATE POLICY "Public settings update" ON public.global_settings FOR ALL USING (true);
+
+-- Function to increment total_usage
+CREATE OR REPLACE FUNCTION public.increment_project_usage(p_id UUID, p_amount INT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE public.projects
+    SET total_usage = COALESCE(total_usage, 0) + p_amount
+    WHERE id = p_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 8. Strict Trigger: ONLY create profile if email is in allowed_users!
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -176,9 +187,9 @@ CREATE TRIGGER on_allowed_user_removed
 
 -- 9. Initial Seed Data
 INSERT INTO public.projects (
-    name, description, status, daily_limit, current_generations, cloudinary_tag
+    name, description, status, cloudinary_tag
 ) VALUES (
-    'Cairo Airport AI Photobooth', 'Main AI Photobooth instance at Cairo International Airport', 'active', 500, 0, 'cairo-airport-photobooth'
+    'Cairo Airport AI Photobooth', 'Main AI Photobooth instance at Cairo International Airport', 'active', 'cairo-airport-photobooth'
 ) ON CONFLICT DO NOTHING;
 
 INSERT INTO public.global_settings (id) VALUES ('current') ON CONFLICT DO NOTHING;

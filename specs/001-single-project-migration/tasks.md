@@ -40,9 +40,9 @@
 > **Goal**: Refactor the main dashboard UI to focus exclusively on the single photobooth project, removing multi-project selectors and complex charts.
 > **Independent Test**: Open main dashboard page, verify single project status badge, quota progress bar, and quota edit form render without multi-project dropdowns or charting errors.
 
-- [ ] T011 [US2] Update project state interfaces and type definitions for single project scope in [types.ts](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/types.ts)
-- [ ] T012 [US2] Adapt state management helper functions for single active project in [store.ts](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/store.ts)
-- [ ] T013 [US2] Refactor main dashboard page [app/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/page.tsx) to remove `recharts` analytics and multi-project selection controls in favor of a unified single-project card
+- [x] T011 [US2] Update project state interfaces and type definitions for single project scope in [types.ts](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/types.ts)
+- [x] T012 [US2] Adapt state management helper functions for single active project in [store.ts](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/store.ts)
+- [x] T013 [US2] Refactor main dashboard page [app/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/page.tsx) to remove `recharts` analytics and multi-project selection controls in favor of a unified single-project card
 
 ---
 

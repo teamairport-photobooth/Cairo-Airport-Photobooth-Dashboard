@@ -20,12 +20,10 @@ export interface Project {
   createdAt: string;
   ownerId: string;
   // Stats
-  dailyLimit: number;
-  currentGenerations: number;
-  max_usage?: number; // Supabase map
+  totalUsage?: number;
   total_usage?: number; // Supabase map
   // Status
-  status: 'active' | 'paused' | 'exhausted';
+  status: 'active' | 'paused';
   is_active?: boolean; // Supabase map
   // Cloudinary
   cloudinaryCloudName?: string;

@@ -1,5 +1,5 @@
 
-import { User, Project, UsageLog, UserRole } from './types';
+import { User, Project, UserRole } from './types';
 
 const INITIAL_USERS: User[] = [
   {
@@ -14,21 +14,19 @@ const INITIAL_USERS: User[] = [
     name: 'Jane Doe',
     email: 'jane@example.com',
     role: UserRole.REGULAR,
-    assignedProjectIds: ['p1']
+    assignedProjectIds: ['cairo-airport-photobooth']
   }
 ];
 
 const INITIAL_PROJECTS: Project[] = [
   {
-    id: 'p1',
-    name: 'Wedding Gala 2024',
-    description: 'AI Generated portraits for the Smith-Jones wedding event.',
-    dailyLimit: 500,
-    currentGenerations: 124,
+    id: 'cairo-airport-photobooth',
+    name: 'Cairo Airport AI Photobooth',
+    description: 'Main AI Photobooth instance at Cairo International Airport',
     createdAt: new Date().toISOString(),
     status: 'active',
-    ownerId: 'u2',
-    cloudinaryTag: 'wedding'
+    ownerId: 'system',
+    cloudinaryTag: 'cairo-airport-photobooth'
   }
 ];
 
@@ -50,9 +48,6 @@ export const initializeStore = () => {
   }
   if (!localStorage.getItem('pb_projects')) {
     setStoreData('pb_projects', INITIAL_PROJECTS);
-  }
-  if (!localStorage.getItem('pb_logs')) {
-    setStoreData('pb_logs', []);
   }
   if (!localStorage.getItem('pb_settings')) {
     setStoreData('pb_settings', {

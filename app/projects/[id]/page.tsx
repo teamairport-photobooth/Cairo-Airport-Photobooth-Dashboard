@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -29,7 +28,6 @@ import {
     Search,
     Calendar,
     ArrowUpDown,
-    Clock,
     Star,
     StarOff,
     X
@@ -61,7 +59,6 @@ export default function ProjectDetailPage() {
     const [editForm, setEditForm] = useState({
         name: '',
         description: '',
-        dailyLimit: 0,
         cloudinaryTag: ''
     });
     const [taggingId, setTaggingId] = useState<string | null>(null);
@@ -133,11 +130,10 @@ export default function ProjectDetailPage() {
                 id: p.id,
                 name: p.name,
                 description: p.description || '',
-                dailyLimit: p.max_usage || 0,
-                currentGenerations: p.total_usage || 0,
+                totalUsage: p.total_usage || 0,
                 createdAt: p.created_at,
                 ownerId: p.created_by || '',
-                status: p.is_active ? ((p.total_usage || 0) >= (p.max_usage || 0) ? 'exhausted' : 'active') : 'paused',
+                status: p.is_active ? 'active' : 'paused',
                 cloudinaryCloudName: finalCloudName,
                 cloudinaryTag: p.cloudinary_tag,
                 cloudinaryApiKey: finalApiKey,
@@ -148,11 +144,10 @@ export default function ProjectDetailPage() {
             setEditForm({
                 name: mapped.name,
                 description: mapped.description,
-                dailyLimit: mapped.dailyLimit,
                 cloudinaryTag: mapped.cloudinaryTag || ''
             });
 
-            // Fetch Logs based on timeRange
+            // Fetch Usage Logs based on timeRange
             let beginDate: Date;
             let finalDate: Date = new Date();
 
@@ -185,31 +180,45 @@ export default function ProjectDetailPage() {
                 fetchFeaturedImages(mapped, false);
             }
 
-            // Fetch Members
-            const { data: memberData, error: mError } = await supabase
-                .from('project_members')
-                .select('id, profiles(id, full_name, email, avatar_url, role)')
-                .eq('project_id', id);
-
-
-            setMembers((memberData || []).map((m: any) => ({
-                memberId: m.id,
-                ...(Array.isArray(m.profiles) ? m.profiles[0] : m.profiles || {})
-            })));
-
-            // Fetch All Profiles (for adding)
-            if (user?.role === UserRole.ADMIN) {
-                const { data: profileData, error: pError } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, email, avatar_url, role');
-                setAllProfiles(profileData || []);
+            fetchMembers();
+            if (user.role === UserRole.ADMIN) {
+                fetchAllProfiles();
             }
-
         } catch (err) {
             console.error('Error fetching project:', err);
-            router.push('/projects');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchMembers = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('project_members')
+                .select('id, user_id, profiles(id, full_name, email, avatar_url, role)')
+                .eq('project_id', id);
+
+            if (error) throw error;
+            setMembers((data || []).map((m: any) => ({
+                memberId: m.id,
+                ...m.profiles
+            })));
+        } catch (err) {
+            console.error('Error fetching members:', err);
+        }
+    };
+
+    const fetchAllProfiles = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('full_name', { ascending: true });
+
+            if (error) throw error;
+            setAllProfiles(data || []);
+        } catch (err) {
+            console.error('Error fetching profiles:', err);
         }
     };
 
@@ -220,50 +229,113 @@ export default function ProjectDetailPage() {
                 .insert([{ project_id: id, user_id: userId }]);
 
             if (error) throw error;
-            fetchProjectData();
-        } catch (err) {
-            console.error('Error adding member:', err);
-            alert('User might already be a member of this project.');
+            fetchMembers();
+        } catch (err: any) {
+            alert(`Could not add member: ${err.message}`);
         }
     };
 
-    const handleRemoveMember = async (memberId: string) => {
+    const handleRemoveMember = async (memberTableId: string) => {
         try {
             const { error } = await supabase
                 .from('project_members')
                 .delete()
-                .eq('id', memberId);
+                .eq('id', memberTableId);
 
             if (error) throw error;
-            fetchProjectData();
-        } catch (err) {
-            console.error('Error removing member:', err);
+            fetchMembers();
+        } catch (err: any) {
+            alert(`Could not remove member: ${err.message}`);
         }
     };
 
-    const handleDeleteProject = async () => {
-        if (!project) return;
+    const fetchImages = async (tag?: string, targetProj?: Project, isNext = false) => {
+        const p = targetProj || project;
+        const currentTag = tag || p?.cloudinaryTag;
 
-        const confirmed = window.confirm(
-            `Are you sure you want to permanently delete "${project.name}"?\nThis action cannot be undone.`
-        );
+        if (!p || !currentTag) return;
 
-        if (!confirmed) return;
+        if (isNext) {
+            setLoadingMore(true);
+        } else {
+            setLoadingImages(true);
+            setImages([]);
+            setNextCursor(null);
+        }
 
-        setIsDeleting(true);
         try {
-            const { error } = await supabase
-                .from('projects')
-                .delete()
-                .eq('id', project.id);
+            const queryParams = new URLSearchParams({
+                tag: currentTag,
+                sort: sortOrder,
+                cloudName: p.cloudinaryCloudName || '',
+                apiKey: p.cloudinaryApiKey || '',
+                apiSecret: p.cloudinaryApiSecret || ''
+            });
 
-            if (error) throw error;
+            const activeCursor = isNext ? nextCursor : null;
+            if (activeCursor) {
+                queryParams.append('next_cursor', activeCursor);
+            }
 
-            router.push('/projects');
+            const res = await fetch(`/api/cloudinary/images?${queryParams.toString()}`);
+            const data = await res.json();
+
+            if (res.ok) {
+                const newImgs = data.resources || [];
+                setImages(prev => isNext ? [...prev, ...newImgs] : newImgs);
+                setNextCursor(data.next_cursor || null);
+            } else {
+                console.error('Cloudinary API error:', data.error);
+            }
         } catch (err) {
-            console.error('Delete error:', err);
-            alert('Failed to delete project. Please try again.');
-            setIsDeleting(false);
+            console.error('Failed to fetch Cloudinary images:', err);
+        } finally {
+            setLoadingImages(false);
+            setLoadingMore(false);
+        }
+    };
+
+    const fetchFeaturedImages = async (targetProj?: Project, isNext = false) => {
+        const p = targetProj || project;
+        if (!p || !p.cloudinaryTag) return;
+
+        if (isNext) {
+            setLoadingMoreFeatured(true);
+        } else {
+            setLoadingFeatured(true);
+            setFeaturedImages([]);
+            setFeaturedCursor(null);
+        }
+
+        try {
+            const queryParams = new URLSearchParams({
+                tag: `${p.cloudinaryTag},Featured`,
+                sort: sortOrder,
+                cloudName: p.cloudinaryCloudName || '',
+                apiKey: p.cloudinaryApiKey || '',
+                apiSecret: p.cloudinaryApiSecret || ''
+            });
+
+            const activeCursor = isNext ? featuredCursor : null;
+            if (activeCursor) {
+                queryParams.append('next_cursor', activeCursor);
+            }
+
+            const res = await fetch(`/api/cloudinary/images?${queryParams.toString()}`);
+            const data = await res.json();
+
+            if (res.ok) {
+                const newImgs = data.resources || [];
+                setFeaturedImages(prev => isNext ? [...prev, ...newImgs] : newImgs);
+                setFeaturedCursor(data.next_cursor || null);
+            } else {
+                console.error('Cloudinary Featured API error:', data.error);
+            }
+        } catch (err) {
+            console.error('Failed to fetch Cloudinary featured images:', err);
+        } finally {
+            setLoadingFeatured(false);
+            setLoadingMoreFeatured(false);
         }
     };
 
@@ -277,7 +349,6 @@ export default function ProjectDetailPage() {
                 .update({
                     name: editForm.name,
                     description: editForm.description,
-                    max_usage: editForm.dailyLimit,
                     cloudinary_tag: editForm.cloudinaryTag
                 })
                 .eq('id', project.id);
@@ -315,7 +386,6 @@ export default function ProjectDetailPage() {
             });
 
             if (response.ok) {
-                // Update local state for 'images'
                 setImages(prev => prev.map(i => {
                     if (i.public_id === img.public_id) {
                         const newTags = isFeatured
@@ -326,120 +396,40 @@ export default function ProjectDetailPage() {
                     return i;
                 }));
 
-                // Update featuredImages if needed
                 if (isFeatured) {
-                    setFeaturedImages(prev => {
-                        const remaining = prev.filter(i => i.public_id !== img.public_id);
-                        // If we just emptied the list but there's more on the server, auto-fetch
-                        if (remaining.length === 0 && featuredCursor) {
-                            fetchFeaturedImages(undefined, true);
-                        }
-                        return remaining;
-                    });
+                    setFeaturedImages(prev => prev.filter(i => i.public_id !== img.public_id));
                 } else {
-                    const updatedImg = { ...img, tags: [...(img.tags || []), tag] };
-                    setFeaturedImages(prev => {
-                        if (prev.some(i => i.public_id === img.public_id)) return prev;
-                        return [updatedImg, ...prev];
-                    });
+                    setFeaturedImages(prev => [img, ...prev]);
                 }
             } else {
-                const errorData = await response.json();
-                alert(`Failed to update tag: ${errorData.error}`);
+                alert('Failed to update image tag');
             }
         } catch (err) {
             console.error('Error toggling tag:', err);
+            alert('An error occurred while updating tag');
         } finally {
             setTaggingId(null);
         }
     };
 
-    const fetchImages = async (tag?: string, currentProject?: Project, append = false) => {
-        const p = currentProject || project;
-        if (!p) return;
+    const handleDeleteProject = async () => {
+        if (!project || isDeleting) return;
+        if (!confirm(`Are you sure you want to delete "${project.name}"? This action cannot be undone.`)) return;
 
-        const activeTag = tag || p.cloudinaryTag || '';
-        if (!activeTag) return;
-
-        if (append) setLoadingMore(true);
-        else setLoadingImages(true);
-
+        setIsDeleting(true);
         try {
-            // Simplified URL: The server-side API now fetches secrets from Supabase global_settings
-            let url = `/api/cloudinary/images?tag=${encodeURIComponent(activeTag)}&sort=${sortOrder}`;
-            if (p.cloudinaryCloudName) {
-                url += `&cloudName=${encodeURIComponent(p.cloudinaryCloudName)}`;
-            }
-            if (append && nextCursor) {
-                url += `&next_cursor=${nextCursor}`;
-            }
+            const { error } = await supabase
+                .from('projects')
+                .delete()
+                .eq('id', project.id);
 
-            const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                if (append) {
-                    setImages(prev => {
-                        const existingIds = new Set(prev.map(i => i.public_id));
-                        const newResources = (data.resources || []).filter((r: any) => !existingIds.has(r.public_id));
-                        return [...prev, ...newResources];
-                    });
-                } else {
-                    setImages(data.resources || []);
-                }
-                setNextCursor(data.next_cursor || null);
-            } else {
-                if (!append) setImages([]);
-            }
-        } catch (err) {
-            console.error('Error fetching Cloudinary images:', err);
+            if (error) throw error;
+            router.push('/projects');
+        } catch (err: any) {
+            console.error('Delete project error:', err);
+            alert(`Failed to delete project: ${err.message}`);
         } finally {
-            setLoadingImages(false);
-            setLoadingMore(false);
-        }
-    };
-
-    const fetchFeaturedImages = async (currentProject?: Project, append = false) => {
-        const p = currentProject || project;
-        if (!p) return;
-
-        const projectTag = p.cloudinaryTag || '';
-        if (!projectTag) return;
-
-        const activeTag = 'Featured';
-
-        if (append) setLoadingMoreFeatured(true);
-        else setLoadingFeatured(true);
-
-        try {
-            let url = `/api/cloudinary/images?tag=${encodeURIComponent(projectTag)}&subtag=${encodeURIComponent(activeTag)}&sort=${sortOrder}`;
-            if (p.cloudinaryCloudName) {
-                url += `&cloudName=${encodeURIComponent(p.cloudinaryCloudName)}`;
-            }
-            if (append && featuredCursor) {
-                url += `&next_cursor=${featuredCursor}`;
-            }
-
-            const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                if (append) {
-                    setFeaturedImages(prev => {
-                        const existingIds = new Set(prev.map(i => i.public_id));
-                        const newResources = (data.resources || []).filter((r: any) => !existingIds.has(r.public_id));
-                        return [...prev, ...newResources];
-                    });
-                } else {
-                    setFeaturedImages(data.resources || []);
-                }
-                setFeaturedCursor(data.next_cursor || null);
-            } else {
-                if (!append) setFeaturedImages([]);
-            }
-        } catch (err) {
-            console.error('Error fetching Featured images:', err);
-        } finally {
-            setLoadingFeatured(false);
-            setLoadingMoreFeatured(false);
+            setIsDeleting(false);
         }
     };
 
@@ -450,7 +440,7 @@ export default function ProjectDetailPage() {
         try {
             const amount = 1;
 
-            // 1. Create a log entry
+            // 1. Create a log entry in usage_logs
             const { error: logError } = await supabase
                 .from('usage_logs')
                 .insert([{ project_id: project.id, amount }]);
@@ -465,12 +455,12 @@ export default function ProjectDetailPage() {
 
             if (updateError) throw updateError;
 
-            // Refresh UI
+            // Refresh UI and logs
             await fetchProjectData();
 
         } catch (err) {
             console.error('Simulation error:', err);
-            alert('Simulation failed. Did you create the increment_project_usage function?');
+            alert('Simulation failed. Did you execute the increment_project_usage database RPC?');
         } finally {
             setIsSimulating(false);
         }
@@ -488,22 +478,31 @@ export default function ProjectDetailPage() {
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
-            }).replace(/[,:]/g, '').replace(/\s+/g, '_');
-            const fileName = `${project?.name}_${dateStr}.${img.format}`;
-            const url = `https://res.cloudinary.com/${project?.cloudinaryCloudName || 'placeholder'}/image/upload/v${img.version}/${img.public_id}.${img.format}`;
+            }).replace(/,/g, '').replace(/ /g, '_');
 
-            await handleDownload(url, fileName);
-            // Small delay to prevent browser blocking multiple downloads
-            await new Promise(resolve => setTimeout(resolve, 300));
+            const filename = `${project?.name.replace(/ /g, '_')}_${dateStr}.${img.format}`;
+            const downloadUrl = `https://res.cloudinary.com/${project?.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
+            
+            triggerDownload(downloadUrl, filename);
+            await new Promise(r => setTimeout(r, 400));
         }
     };
 
-    const toggleSelectAll = () => {
-        const currentImages = activeTab === 'featured' ? featuredImages : images;
-        if (selectedIds.length === currentImages.length) {
-            setSelectedIds([]);
-        } else {
-            setSelectedIds(currentImages.map(img => img.public_id));
+    const triggerDownload = async (url: string, filename: string) => {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download failed:', error);
+            window.open(url + (url.includes('?') ? '&' : '?') + 'fl_attachment', '_blank');
         }
     };
 
@@ -515,22 +514,12 @@ export default function ProjectDetailPage() {
         );
     };
 
-    const handleDownload = async (url: string, filename: string) => {
-        try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
-        } catch (error) {
-            console.error('Download failed:', error);
-            // Fallback: open in new tab with attachment flag if possible
-            window.open(url + (url.includes('?') ? '&' : '?') + 'fl_attachment', '_blank');
+    const toggleSelectAll = () => {
+        const currentImages = activeTab === 'featured' ? featuredImages : images;
+        if (selectedIds.length === currentImages.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(currentImages.map(img => img.public_id));
         }
     };
 
@@ -541,7 +530,7 @@ export default function ProjectDetailPage() {
     };
 
     const chartData = useMemo(() => {
-        const lastDays = [];
+        const lastDays: { name: string; dateStr: string; count: number }[] = [];
 
         let start: Date;
         let end: Date = new Date();
@@ -592,7 +581,6 @@ export default function ProjectDetailPage() {
 
         const displayItems: { label: string; value: string }[] = [];
 
-        // Merge prompt_1, prompt_2, prompt_11, etc.
         const promptKeys = Object.keys(ctx).filter(k => k.startsWith('prompt_'));
         if (promptKeys.length > 0) {
             const sortedPromptKeys = promptKeys.sort((a, b) => {
@@ -604,14 +592,12 @@ export default function ProjectDetailPage() {
             displayItems.push({ label: 'Full Generation Prompt', value: fullPrompt });
         }
 
-        // Add other context fields (excluding the merged prompts)
         Object.entries(ctx).forEach(([key, value]) => {
             if (!key.startsWith('prompt_')) {
                 displayItems.push({ label: key.replace(/_/g, ' '), value });
             }
         });
 
-        // Add metadata fields (from structured metadata if any)
         Object.entries(meta).forEach(([key, value]) => {
             displayItems.push({ label: key.replace(/_/g, ' '), value });
         });
@@ -629,8 +615,6 @@ export default function ProjectDetailPage() {
             </div>
         );
     }
-
-    const usagePercent = (project.currentGenerations / project.dailyLimit) * 100;
 
     return (
         <>
@@ -684,38 +668,27 @@ export default function ProjectDetailPage() {
                 {activeTab === 'overview' && (
                     <div className={`grid grid-cols-1 ${user.role === UserRole.ADMIN ? 'lg:grid-cols-3' : 'max-w-4xl mx-auto'} gap-8`}>
                         <div className={user.role === UserRole.ADMIN ? 'lg:col-span-2 space-y-8' : 'space-y-8'}>
+                            {/* Total Usage Stat Card */}
                             <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-8 opacity-5">
                                     <Zap size={120} />
                                 </div>
-                                <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center justify-between mb-2">
                                     <div>
-                                        <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Real-time Usage</p>
+                                        <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Generations</p>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-4xl font-black text-slate-800">{project.currentGenerations}</span>
-                                            <span className="text-slate-400 font-medium">/ {project.dailyLimit} images</span>
+                                            <span className="text-4xl font-black text-slate-800">{(project.totalUsage || 0).toLocaleString()}</span>
+                                            <span className="text-slate-400 font-medium">total images generated</span>
                                         </div>
                                     </div>
-                                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${project.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                                        }`}>
+                                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${project.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                                         {project.status}
                                     </div>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full transition-all duration-700 rounded-full ${usagePercent > 90 ? 'bg-red-500' : usagePercent > 70 ? 'bg-amber-500' : 'bg-indigo-500'
-                                                }`}
-                                            style={{ width: `${Math.min(100, usagePercent)}%` }}
-                                        />
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-500 font-medium">{Math.floor(usagePercent)}% capacity used</span>
-                                        <span className="text-slate-800 font-bold">{project.dailyLimit - project.currentGenerations} remaining</span>
-                                    </div>
-                                </div>
+                                <p className="text-xs text-slate-400 mt-4">Continuous generation enabled with no usage cap</p>
                             </div>
 
+                            {/* Generations Analytics Chart */}
                             <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
                                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
                                     <h3 className="text-lg font-bold text-slate-800">Generations Activity</h3>
@@ -781,6 +754,7 @@ export default function ProjectDetailPage() {
                                 </div>
                             </div>
 
+                            {/* API Integration */}
                             {user.role === UserRole.ADMIN && (
                                 <div className="bg-slate-900 rounded-2xl p-8 text-white shadow-xl shadow-slate-200">
                                     <div className="flex items-center justify-between mb-6">
@@ -792,18 +766,18 @@ export default function ProjectDetailPage() {
                                         </div>
                                         <button
                                             onClick={handleSimulateApiCall}
-                                            disabled={isSimulating || project.status === 'exhausted'}
-                                            className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${isSimulating || project.status === 'exhausted'
+                                            disabled={isSimulating}
+                                            className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${isSimulating
                                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                                                 : 'bg-white text-slate-900 hover:bg-indigo-50 active:scale-95 shadow-lg shadow-white/10'
                                                 }`}
                                         >
                                             {isSimulating ? <RefreshCw className="animate-spin" size={18} /> : <Play size={18} />}
-                                            {isSimulating ? 'Sending Request...' : 'Simulate API Call'}
+                                            {isSimulating ? 'Sending Request...' : 'Simulate Generation'}
                                         </button>
                                     </div>
                                     <p className="text-slate-400 mb-6 text-sm">
-                                        Use the endpoint below to increment image generation counts. Every request updates Cloudinary project usage.
+                                        Use the endpoint below to log live image generation events. Every request updates usage logs and increments total count.
                                     </p>
                                     <div className="space-y-4">
                                         <div>
@@ -825,6 +799,7 @@ export default function ProjectDetailPage() {
                             )}
                         </div>
 
+                        {/* Sidebar: Team Members & Settings */}
                         {user.role === UserRole.ADMIN && (
                             <div className="space-y-6">
                                 <div className="bg-white border border-slate-200 rounded-2xl p-6">
@@ -931,17 +906,6 @@ export default function ProjectDetailPage() {
                                             <p className="text-xs font-bold text-slate-400 uppercase mb-2">Tag / Folder Path</p>
                                             <p className="font-medium text-slate-700">{project.cloudinaryTag || 'Not set'}</p>
                                         </div>
-                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">API Security</p>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase">
-                                                    SDK Protected
-                                                </span>
-                                                <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                                                    Supabase Secure
-                                                </span>
-                                            </div>
-                                        </div>
                                         <div className="pt-4 border-t border-slate-100">
                                             <button
                                                 onClick={handleDeleteProject}
@@ -959,6 +923,7 @@ export default function ProjectDetailPage() {
                     </div>
                 )}
 
+                {/* Generated Images Tab */}
                 {activeTab === 'images' && (
                     <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm min-h-[500px]">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -1028,7 +993,7 @@ export default function ProjectDetailPage() {
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-800">Cloudinary Not Configured</h4>
                                 <p className="text-slate-500 max-w-sm mt-2">
-                                    Please set a Cloud Name and Tag in the project settings to fetch generated images from your Cloudinary account.
+                                    Please set a Cloud Name and Tag in the project settings to fetch photos from your Cloudinary account.
                                 </p>
                             </div>
                         ) : loadingImages ? (
@@ -1037,7 +1002,7 @@ export default function ProjectDetailPage() {
                                     <div key={n} className="aspect-square bg-slate-100 rounded-2xl animate-pulse" />
                                 ))}
                             </div>
-                        ) : (images.length > 0 || nextCursor) ? (
+                        ) : images.length > 0 ? (
                             <>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                     {images.map(img => (
@@ -1056,13 +1021,6 @@ export default function ProjectDetailPage() {
                                                 {selectedIds.includes(img.public_id) && <Check size={16} />}
                                             </div>
 
-                                            {img.tags?.includes('Featured') && (
-                                                <div className="absolute top-3 left-3 z-20 px-2 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-lg shadow-lg flex items-center gap-1 animate-in zoom-in-95">
-                                                    <Zap size={10} fill="currentColor" />
-                                                    Featured
-                                                </div>
-                                            )}
-
                                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
                                                 <p className="text-white text-[10px] font-bold truncate">
                                                     {project.name} - {new Date(img.created_at).toLocaleString(undefined, {
@@ -1072,67 +1030,48 @@ export default function ProjectDetailPage() {
                                                         minute: '2-digit'
                                                     })}
                                                 </p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const dateStr = new Date(img.created_at).toLocaleString(undefined, {
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            }).replace(/[,:]/g, '').replace(/\s+/g, '_');
-                                                            const fileName = `${project.name}_${dateStr}.${img.format}`;
-                                                            handleDownload(
-                                                                `https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/v${img.version}/${img.public_id}.${img.format}`,
-                                                                fileName
-                                                            );
-                                                        }}
-                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                        title="Download Image"
-                                                    >
-                                                        <Download size={14} />
-                                                    </button>
-                                                    <a
-                                                        href={`https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/v${img.version}/${img.public_id}.${img.format}`}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                        title="Open in new tab"
-                                                    >
-                                                        <ExternalLink size={14} />
-                                                    </a>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleToggleTag(img);
-                                                        }}
-                                                        disabled={taggingId === img.public_id}
-                                                        className={`p-1.5 backdrop-blur-md rounded-lg text-white transition-colors ${img.tags?.includes('Featured')
-                                                            ? 'bg-amber-500 hover:bg-amber-600'
-                                                            : 'bg-white/20 hover:bg-white/40'
-                                                            }`}
-                                                        title={img.tags?.includes('Featured') ? 'Remove from Featured' : 'Mark as Featured'}
-                                                    >
-                                                        {taggingId === img.public_id ? (
-                                                            <Loader2 size={14} className="animate-spin" />
-                                                        ) : img.tags?.includes('Featured') ? (
-                                                            <Star size={14} fill="currentColor" />
-                                                        ) : (
-                                                            <Star size={14} />
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setInspectImage(img);
-                                                        }}
-                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                        title="View Information"
-                                                    >
-                                                        <Info size={14} />
-                                                    </button>
+                                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10">
+                                                    <span className="text-[10px] text-slate-300 uppercase tracking-widest">{img.format} • {img.width}x{img.height}</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleTag(img);
+                                                            }}
+                                                            disabled={taggingId === img.public_id}
+                                                            className={`p-1.5 rounded-lg transition-colors ${img.tags?.includes('Featured') ? 'bg-amber-500 text-white' : 'bg-white/20 text-white hover:bg-white/40'}`}
+                                                            title={img.tags?.includes('Featured') ? 'Remove from Featured' : 'Tag as Featured'}
+                                                        >
+                                                            {taggingId === img.public_id ? (
+                                                                <Loader2 size={14} className="animate-spin" />
+                                                            ) : img.tags?.includes('Featured') ? (
+                                                                <Star size={14} fill="currentColor" />
+                                                            ) : (
+                                                                <StarOff size={14} />
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const downloadUrl = `https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
+                                                                triggerDownload(downloadUrl, `${project.name}_${img.public_id}.${img.format}`);
+                                                            }}
+                                                            className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
+                                                            title="Download Image"
+                                                        >
+                                                            <Download size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setInspectImage(img);
+                                                            }}
+                                                            className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
+                                                            title="View Details"
+                                                        >
+                                                            <Info size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1141,9 +1080,10 @@ export default function ProjectDetailPage() {
                                 {images.length === 0 && nextCursor && (
                                     <div className="flex flex-col items-center justify-center py-20 text-center w-full">
                                         <Loader2 className="animate-spin text-indigo-600 mb-4" size={32} />
-                                        <p className="text-slate-500 font-medium">Fetching more images...</p>
+                                        <p className="text-slate-500 font-medium">Fetching more photos...</p>
                                     </div>
                                 )}
+
                                 {nextCursor && (
                                     <div className="mt-12 flex justify-center">
                                         <button
@@ -1164,21 +1104,14 @@ export default function ProjectDetailPage() {
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-800">No Images Found</h4>
                                 <p className="text-slate-500 max-w-sm mt-2">
-                                    We couldn't find any images for the tag <span className="font-bold">"{project.cloudinaryTag}"</span>. Make sure your photobooth is uploading assets to Cloudinary.
+                                    We couldn't find any images for tag <span className="font-bold">"{project.cloudinaryTag}"</span>. Make sure your photobooth is uploading assets to Cloudinary.
                                 </p>
-                                <div className="mt-6 p-4 bg-indigo-50 rounded-xl text-left">
-                                    <p className="text-xs font-bold text-indigo-600 uppercase mb-2 flex items-center gap-1">
-                                        <Info size={14} /> Tip for developers
-                                    </p>
-                                    <p className="text-xs text-indigo-900 leading-relaxed">
-                                        The dashboard now uses the <b>Cloudinary Node.js SDK</b> securely. Ensure you have provided your <b>API Key</b> and <b>Secret</b> in the global settings. No insecure "Resource List" settings are required on Cloudinary.
-                                    </p>
-                                </div>
                             </div>
                         )}
                     </div>
                 )}
 
+                {/* Featured Photos Tab */}
                 {activeTab === 'featured' && (
                     <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm min-h-[500px]">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -1201,7 +1134,6 @@ export default function ProjectDetailPage() {
                                 <button
                                     onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                                     className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 text-sm font-bold transition-all"
-                                    title={sortOrder === 'desc' ? 'Sort Ascending' : 'Sort Descending'}
                                 >
                                     <ArrowUpDown size={16} className={sortOrder === 'asc' ? 'rotate-180 transition-transform' : 'transition-transform'} />
                                     {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
@@ -1216,41 +1148,12 @@ export default function ProjectDetailPage() {
                             </div>
                         </div>
 
-                        {selectedIds.length > 0 && featuredImages.length > 0 && (
-                            <div className="flex items-center justify-between mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 animate-in slide-in-from-top-2 duration-300">
-                                <div className="flex items-center gap-4">
-                                    <button
-                                        onClick={toggleSelectAll}
-                                        className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-2"
-                                    >
-                                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedIds.length === featuredImages.length ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-indigo-300'}`}>
-                                            {selectedIds.length === featuredImages.length && <Check size={14} />}
-                                        </div>
-                                        {selectedIds.length === featuredImages.length ? 'Deselect All' : 'Select All'}
-                                    </button>
-                                    <span className="text-sm text-indigo-400">|</span>
-                                    <span className="text-sm font-medium text-indigo-600">{selectedIds.length} images selected</span>
-                                </div>
-                                <button
-                                    onClick={handleBulkDownload}
-                                    disabled={selectedIds.length === 0}
-                                    className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
-                                >
-                                    <Download size={18} />
-                                    Download Selected
-                                </button>
-                            </div>
-                        )}
-
                         {!project.cloudinaryTag ? (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-4">
                                     <Info size={32} />
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-800">Cloudinary Not Configured</h4>
-                                <p className="text-slate-500 max-w-sm mt-2">
-                                    Please set a Cloud Name and Tag in the project settings to fetch featured photos from your Cloudinary account.
-                                </p>
                             </div>
                         ) : loadingFeatured ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -1286,91 +1189,47 @@ export default function ProjectDetailPage() {
                                                         minute: '2-digit'
                                                     })}
                                                 </p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const dateStr = new Date(img.created_at).toLocaleString(undefined, {
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            }).replace(/[,:]/g, '').replace(/\s+/g, '_');
-                                                            const fileName = `${project.name}_${dateStr}.${img.format}`;
-                                                            handleDownload(
-                                                                `https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/v${img.version}/${img.public_id}.${img.format}`,
-                                                                fileName
-                                                            );
-                                                        }}
-                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                        title="Download Image"
-                                                    >
-                                                        <Download size={14} />
-                                                    </button>
-                                                    <a
-                                                        href={`https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/v${img.version}/${img.public_id}.${img.format}`}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                        title="Open in new tab"
-                                                    >
-                                                        <ExternalLink size={14} />
-                                                    </a>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleToggleTag(img);
-                                                        }}
-                                                        disabled={taggingId === img.public_id}
-                                                        className={`p-1.5 backdrop-blur-md rounded-lg text-white transition-colors ${img.tags?.includes('Featured')
-                                                            ? 'bg-amber-500 hover:bg-amber-600'
-                                                            : 'bg-white/20 hover:bg-white/40'
-                                                            }`}
-                                                        title={img.tags?.includes('Featured') ? 'Remove from Featured' : 'Mark as Featured'}
-                                                    >
-                                                        {taggingId === img.public_id ? (
-                                                            <Loader2 size={14} className="animate-spin" />
-                                                        ) : img.tags?.includes('Featured') ? (
-                                                            <Star size={14} fill="currentColor" />
-                                                        ) : (
-                                                            <Star size={14} />
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setInspectImage(img);
-                                                        }}
-                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                        title="View Information"
-                                                    >
-                                                        <Info size={14} />
-                                                    </button>
+                                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10">
+                                                    <span className="text-[10px] text-slate-300 uppercase tracking-widest">{img.format} • {img.width}x{img.height}</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleTag(img);
+                                                            }}
+                                                            disabled={taggingId === img.public_id}
+                                                            className="p-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                                                            title="Remove from Featured"
+                                                        >
+                                                            {taggingId === img.public_id ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} fill="currentColor" />}
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const downloadUrl = `https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
+                                                                triggerDownload(downloadUrl, `${project.name}_${img.public_id}.${img.format}`);
+                                                            }}
+                                                            className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
+                                                            title="Download Image"
+                                                        >
+                                                            <Download size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setInspectImage(img);
+                                                            }}
+                                                            className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
+                                                            title="View Details"
+                                                        >
+                                                            <Info size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                                {featuredImages.length === 0 && featuredCursor && (
-                                    <div className="flex flex-col items-center justify-center py-20 text-center w-full">
-                                        <Loader2 className="animate-spin text-indigo-600 mb-4" size={32} />
-                                        <p className="text-slate-500 font-medium">Fetching more featured photos...</p>
-                                    </div>
-                                )}
-
-                                {featuredCursor && (
-                                    <div className="mt-12 flex justify-center">
-                                        <button
-                                            onClick={() => fetchFeaturedImages(undefined, true)}
-                                            disabled={loadingMoreFeatured}
-                                            className="flex items-center gap-2 px-8 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold hover:bg-slate-50 hover:border-indigo-200 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-                                        >
-                                            {loadingMoreFeatured ? <RefreshCw className="animate-spin" size={18} /> : null}
-                                            {loadingMoreFeatured ? 'Loading More...' : 'Load More Images'}
-                                        </button>
-                                    </div>
-                                )}
                             </>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">
@@ -1379,19 +1238,20 @@ export default function ProjectDetailPage() {
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-800">No Featured Photos</h4>
                                 <p className="text-slate-500 max-w-sm mt-2">
-                                    Photos tagged with <span className="font-bold">"Featured"</span> will appear here. These are typically your best shots selected for the carousel.
+                                    Photos tagged with <span className="font-bold">"Featured"</span> will appear here.
                                 </p>
                             </div>
                         )}
                     </div>
                 )}
 
+                {/* API Access Logs Tab */}
                 {user.role === UserRole.ADMIN && activeTab === 'logs' && (
                     <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 <History className="text-indigo-500" />
-                                API Access Logs
+                                API Access & Usage Logs
                             </h3>
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">
                                 Real-time feed
@@ -1405,8 +1265,8 @@ export default function ProjectDetailPage() {
                                             <Zap size={18} fill="currentColor" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-800">Image Generation Increment (+{log.amount})</p>
-                                            <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()} • Successful Request</p>
+                                            <p className="text-sm font-bold text-slate-800">Image Generation Event (+{log.amount})</p>
+                                            <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()} • Successful API Call</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
@@ -1415,7 +1275,7 @@ export default function ProjectDetailPage() {
                                         </span>
                                         <div className="h-4 w-[1px] bg-slate-200 hidden md:block" />
                                         <span className="text-[10px] text-slate-400 font-mono hidden md:block">
-                                            ref: {log.id.split('-')[1]}
+                                            ref: {log.id.split('-')[1] || log.id}
                                         </span>
                                     </div>
                                 </div>
@@ -1423,15 +1283,15 @@ export default function ProjectDetailPage() {
                             {logs.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 text-slate-300">
                                     <Activity size={48} className="opacity-20 mb-4" />
-                                    <p className="font-medium">No activity detected for this project yet</p>
+                                    <p className="font-medium">No generation logs recorded yet</p>
                                 </div>
                             )}
                         </div>
                     </div>
-                )
-                }
+                )}
             </div>
 
+            {/* Edit Project Modal */}
             {mounted && showEditModal && createPortal(
                 <div
                     className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto"
@@ -1465,15 +1325,6 @@ export default function ProjectDetailPage() {
                                             rows={3}
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Daily Limit</label>
-                                        <input
-                                            type="number"
-                                            value={editForm.dailyLimit}
-                                            onChange={e => setEditForm({ ...editForm, dailyLimit: parseInt(e.target.value) })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                                        />
-                                    </div>
                                 </div>
 
                                 <div className="space-y-4">
@@ -1486,9 +1337,6 @@ export default function ProjectDetailPage() {
                                             onChange={e => setEditForm({ ...editForm, cloudinaryTag: e.target.value })}
                                             className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                                         />
-                                        <p className="mt-2 text-[10px] text-slate-400 leading-relaxed italic">
-                                            * Cloudinary Cloud Name and API credentials are now managed globally in Settings.
-                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -1514,6 +1362,7 @@ export default function ProjectDetailPage() {
                 document.body
             )}
 
+            {/* Inspect Image Modal */}
             {mounted && inspectImage && createPortal(
                 <div
                     className="fixed inset-0 z-[99999] flex justify-center items-center py-8 md:py-20 px-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto"

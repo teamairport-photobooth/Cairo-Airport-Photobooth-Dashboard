@@ -17,7 +17,6 @@ export default function ProjectListPage() {
     const [newProject, setNewProject] = useState({
         name: '',
         description: '',
-        dailyLimit: 1000,
         assignedUserIds: [] as string[],
         cloudinaryTag: ''
     });
@@ -36,21 +35,11 @@ export default function ProjectListPage() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            // Fetch Projects
-            let projectsQuery = supabase.from('projects').select('*');
-
-            // If not admin, filter by owner OR team membership
-            if (user?.role !== UserRole.ADMIN) {
-                const { data: memberProjects } = await supabase
-                    .from('project_members')
-                    .select('project_id')
-                    .eq('user_id', user?.id);
-
-                const memberIds = (memberProjects || []).map(m => m.project_id);
-                projectsQuery = projectsQuery.or(`created_by.eq.${user?.id},id.in.(${memberIds.length ? memberIds.join(',') : '00000000-0000-0000-0000-000000000000'})`);
-            }
-
-            const { data: projectsData, error: pError } = await projectsQuery.order('created_at', { ascending: false });
+            // Fetch Projects (all authorized users have access to single project)
+            const { data: projectsData, error: pError } = await supabase
+                .from('projects')
+                .select('*')
+                .order('created_at', { ascending: false });
 
             if (pError) throw pError;
 
@@ -59,11 +48,9 @@ export default function ProjectListPage() {
                 id: p.id,
                 name: p.name,
                 description: p.description || '',
-                dailyLimit: p.max_usage || 0,
-                currentGenerations: p.total_usage || 0,
                 createdAt: p.created_at,
                 ownerId: p.created_by || '',
-                status: p.is_active ? ((p.total_usage || 0) >= (p.max_usage || 0) ? 'exhausted' : 'active') : 'paused',
+                status: p.is_active ? 'active' : 'paused',
                 cloudinaryCloudName: p.cloudinary_cloud_name,
                 cloudinaryTag: p.cloudinary_tag,
                 cloudinaryApiKey: p.cloudinary_api_key,
@@ -85,7 +72,7 @@ export default function ProjectListPage() {
                 name: u.full_name || u.email,
                 email: u.email,
                 role: u.role as UserRole,
-                assignedProjectIds: [] // This will need project_members table later
+                assignedProjectIds: []
             })));
 
         } catch (err) {
@@ -103,7 +90,6 @@ export default function ProjectListPage() {
             const projectData = {
                 name: newProject.name.trim(),
                 description: newProject.description.trim(),
-                max_usage: newProject.dailyLimit || 1000,
                 cloudinary_tag: newProject.cloudinaryTag.trim(),
                 created_by: user?.id,
                 is_active: true
@@ -117,23 +103,10 @@ export default function ProjectListPage() {
 
             if (pError) throw pError;
 
-            // 2. Assign Members
-            if (newProject.assignedUserIds.length > 0) {
-                const memberData = newProject.assignedUserIds.map(userId => ({
-                    project_id: project.id,
-                    user_id: userId
-                }));
-                const { error: mError } = await supabase
-                    .from('project_members')
-                    .insert(memberData);
-
-                if (mError) console.warn('Could not assign some members:', mError);
-            }
-
             // Refresh list
             await fetchData();
             setShowModal(false);
-            setNewProject({ name: '', description: '', dailyLimit: 1000, assignedUserIds: [], cloudinaryTag: '' });
+            setNewProject({ name: '', description: '', assignedUserIds: [], cloudinaryTag: '' });
         } catch (err: any) {
             console.error('Error creating project:', err);
             alert(`Project Creation Failed: ${err.message}`);
@@ -144,8 +117,6 @@ export default function ProjectListPage() {
 
     const filteredProjects = useMemo(() => {
         if (!user) return [];
-        // Filtering is now handled at the query level for security/efficiency,
-        // but we keep the memo for search Term filtering.
         let result = projects;
 
         if (searchTerm) {
@@ -214,23 +185,7 @@ export default function ProjectListPage() {
                             </div>
 
                             <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-indigo-600">{project.name}</h3>
-                            <p className="text-sm text-slate-500 mb-6 flex-1 line-clamp-2">{project.description}</p>
-
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between text-xs font-medium">
-                                    <span className="text-slate-400 flex items-center gap-1">
-                                        <ImageIcon size={14} /> Usage
-                                    </span>
-                                    <span className="text-slate-800">{project.currentGenerations} / {project.dailyLimit}</span>
-                                </div>
-                                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-full transition-all duration-1000 ${(project.currentGenerations / project.dailyLimit) > 0.9 ? 'bg-amber-500' : 'bg-indigo-500'
-                                            }`}
-                                        style={{ width: `${Math.min(100, (project.currentGenerations / project.dailyLimit) * 100)}%` }}
-                                    />
-                                </div>
-                            </div>
+                            <p className="text-sm text-slate-500 flex-1 line-clamp-2">{project.description}</p>
                         </Link>
                     ))}
                 </div>
@@ -263,15 +218,6 @@ export default function ProjectListPage() {
                                             className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                                             placeholder="Tell us about this project..."
                                             rows={3}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Daily Limit</label>
-                                        <input
-                                            type="number"
-                                            value={newProject.dailyLimit}
-                                            onChange={e => setNewProject({ ...newProject, dailyLimit: parseInt(e.target.value) })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                                         />
                                     </div>
                                 </div>
