@@ -31,7 +31,6 @@ export default function DashboardPage() {
     const [images, setImages] = useState<CloudinaryImage[]>([]);
     const [loadingImages, setLoadingImages] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [isSimulating, setIsSimulating] = useState(false);
     const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'logs'>('overview');
     const [origin, setOrigin] = useState('');
     const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -207,34 +206,7 @@ export default function DashboardPage() {
         }
     };
 
-    const handleSimulateApiCall = async () => {
-        if (!project || isSimulating) return;
-        setIsSimulating(true);
 
-        try {
-            const amount = 1;
-
-            const { error: logError } = await supabase
-                .from('usage_logs')
-                .insert([{ project_id: project.id, amount }]);
-
-            if (logError) throw logError;
-
-            const { error: updateError } = await supabase.rpc('increment_project_usage', {
-                p_id: project.id,
-                p_amount: amount
-            });
-
-            if (updateError) throw updateError;
-
-            await fetchProjectData();
-        } catch (err) {
-            console.error('Simulation error:', err);
-            alert('Simulation failed. Please try again.');
-        } finally {
-            setIsSimulating(false);
-        }
-    };
 
     const handleBulkDownload = async () => {
         if (selectedIds.length === 0) return;
@@ -536,25 +508,13 @@ export default function DashboardPage() {
                     {/* API Integration Card */}
                     {user.role === UserRole.ADMIN && (
                         <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200">
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
                                         <Cpu size={24} />
                                     </div>
                                     <h3 className="text-xl font-bold">API Integration</h3>
                                 </div>
-                                <button
-                                    onClick={handleSimulateApiCall}
-                                    disabled={isSimulating}
-                                    className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all ${
-                                        isSimulating
-                                            ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                                            : 'bg-white text-slate-900 hover:bg-indigo-50 active:scale-95 shadow-lg shadow-white/10'
-                                    }`}
-                                >
-                                    {isSimulating ? <RefreshCw className="animate-spin" size={18} /> : <Play size={18} />}
-                                    {isSimulating ? 'Sending Request...' : 'Simulate Generation'}
-                                </button>
                             </div>
                             <p className="text-slate-400 mb-6 text-sm">
                                 Use the endpoint below to log live image generation events. Every request updates usage logs and increments total count.

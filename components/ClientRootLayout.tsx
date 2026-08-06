@@ -117,24 +117,37 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             >
                 <div className="flex flex-col h-full">
                     {/* Header with Logo & Minimizer Toggle */}
-                    <div className={`p-6 flex items-center justify-between ${isCollapsed ? 'lg:px-4 lg:justify-center' : ''}`}>
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 shrink-0">
-                                <Zap size={20} fill="currentColor" />
+                    <div className="p-4 flex items-center justify-between border-b border-slate-100 min-h-[64px]">
+                        {!isCollapsed ? (
+                            <>
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 shrink-0">
+                                        <Zap size={20} fill="currentColor" />
+                                    </div>
+                                    <span className="font-bold text-xl text-slate-800 tracking-tight whitespace-nowrap">AI Booth</span>
+                                </div>
+                                <button
+                                    onClick={() => setIsCollapsed(true)}
+                                    className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+                                    title="Collapse Sidebar"
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                            </>
+                        ) : (
+                            <div className="w-full flex items-center justify-center">
+                                <button
+                                    onClick={() => setIsCollapsed(false)}
+                                    className="group relative w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 transition-transform active:scale-95 shrink-0"
+                                    title="Expand Sidebar"
+                                >
+                                    <Zap size={20} fill="currentColor" />
+                                    <div className="absolute -right-1 -top-1 w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center text-[9px] shadow-sm">
+                                        <ChevronRight size={10} />
+                                    </div>
+                                </button>
                             </div>
-                            {!isCollapsed && (
-                                <span className="font-bold text-xl text-slate-800 tracking-tight whitespace-nowrap">AI Booth</span>
-                            )}
-                        </div>
-
-                        {/* Minimize button visible on desktop */}
-                        <button
-                            onClick={() => setIsCollapsed(!isCollapsed)}
-                            className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-                        >
-                            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                        </button>
+                        )}
                     </div>
 
                     {/* Navigation items */}
