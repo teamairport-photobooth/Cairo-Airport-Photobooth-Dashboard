@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,12 +7,15 @@ import { UserRole } from '@/types';
 import {
     LayoutDashboard,
     Users,
-    FolderKanban,
     LogOut,
     Zap,
     Menu,
     Settings,
-    ShieldAlert
+    ShieldAlert,
+    ChevronLeft,
+    ChevronRight,
+    PanelLeftClose,
+    PanelLeftOpen
 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/components/AuthContext';
 
@@ -28,12 +30,12 @@ export default function ClientRootLayout({ children }: { children: React.ReactNo
 function LayoutContent({ children }: { children: React.ReactNode }) {
     const { user, isAuthenticated, logout, loading, session } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
 
     const navItems = [
         { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/', roles: [UserRole.ADMIN, UserRole.REGULAR] },
-        { label: 'Projects', icon: <FolderKanban size={20} />, path: '/projects', roles: [UserRole.ADMIN, UserRole.REGULAR] },
         { label: 'User Management', icon: <Users size={20} />, path: '/users', roles: [UserRole.ADMIN] },
         { label: 'Global Settings', icon: <Settings size={20} />, path: '/settings', roles: [UserRole.ADMIN] },
     ];
@@ -104,54 +106,87 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 />
             )}
 
-            {/* Sidebar */}
-            <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+            {/* Minimizable Sidebar */}
+            <aside
+                className={`
+                    fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
+                    ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+                    ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}
+                    w-64
+                `}
+            >
                 <div className="flex flex-col h-full">
-                    <div className="p-6 flex items-center gap-3">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                            <Zap size={18} fill="currentColor" />
+                    {/* Header with Logo & Minimizer Toggle */}
+                    <div className={`p-6 flex items-center justify-between ${isCollapsed ? 'lg:px-4 lg:justify-center' : ''}`}>
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 shrink-0">
+                                <Zap size={20} fill="currentColor" />
+                            </div>
+                            {!isCollapsed && (
+                                <span className="font-bold text-xl text-slate-800 tracking-tight whitespace-nowrap">AI Booth</span>
+                            )}
                         </div>
-                        <span className="font-bold text-xl text-slate-800 tracking-tight">AI Booth</span>
+
+                        {/* Minimize button visible on desktop */}
+                        <button
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                            className="hidden lg:flex p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                        >
+                            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                        </button>
                     </div>
 
-                    <nav className="flex-1 px-4 py-4 space-y-1">
-                        {navItems.filter(item => item.roles.includes(user.role)).map((item) => (
-                            <Link
-                                key={item.path}
-                                href={item.path}
-                                onClick={() => setSidebarOpen(false)}
-                                className={`
-                  flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                  ${pathname === item.path
-                                        ? 'bg-indigo-50 text-indigo-600 font-semibold'
-                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}
-                `}
-                            >
-                                {item.icon}
-                                {item.label}
-                            </Link>
-                        ))}
+                    {/* Navigation items */}
+                    <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+                        {navItems.filter(item => item.roles.includes(user.role)).map((item) => {
+                            const isActive = pathname === item.path;
+                            return (
+                                <Link
+                                    key={item.path}
+                                    href={item.path}
+                                    onClick={() => setSidebarOpen(false)}
+                                    title={isCollapsed ? item.label : undefined}
+                                    className={`
+                                        flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200
+                                        ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}
+                                        ${isActive
+                                            ? 'bg-indigo-50 text-indigo-600 font-semibold'
+                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}
+                                    `}
+                                >
+                                    <div className="shrink-0">{item.icon}</div>
+                                    {!isCollapsed && (
+                                        <span className="whitespace-nowrap text-sm">{item.label}</span>
+                                    )}
+                                </Link>
+                            );
+                        })}
                     </nav>
 
-                    <div className="p-4 border-t border-slate-100">
-                        <div className="mb-4 flex items-center gap-3 px-4 py-2">
-                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                    {/* User profile & Logout */}
+                    <div className="p-3 border-t border-slate-100">
+                        <div className={`mb-3 flex items-center gap-3 px-2 py-2 ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+                            <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold shrink-0">
                                 {user.name.charAt(0)}
                             </div>
-                            <div className="flex-1 overflow-hidden">
-                                <p className="text-sm font-semibold text-slate-800 truncate">{user.name}</p>
-                                <p className="text-xs text-slate-500 truncate capitalize">{user.role.toLowerCase()}</p>
-                            </div>
+                            {!isCollapsed && (
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="text-sm font-semibold text-slate-800 truncate">{user.name}</p>
+                                    <p className="text-xs text-slate-500 truncate capitalize">{user.role.toLowerCase()}</p>
+                                </div>
+                            )}
                         </div>
+
                         <button
                             onClick={logout}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                            title={isCollapsed ? "Logout" : undefined}
+                            className={`w-full flex items-center gap-3 px-3.5 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors ${
+                                isCollapsed ? 'lg:justify-center lg:px-0' : ''
+                            }`}
                         >
-                            <LogOut size={20} />
-                            Logout
+                            <LogOut size={20} className="shrink-0" />
+                            {!isCollapsed && <span className="text-sm font-medium whitespace-nowrap">Logout</span>}
                         </button>
                     </div>
                 </div>
@@ -160,16 +195,22 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 <header className="h-16 bg-white/80 backdrop-blur-sm border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30">
-                    <button
-                        className="lg:hidden p-2 text-slate-500"
-                        onClick={() => setSidebarOpen(true)}
-                    >
-                        <Menu size={24} />
-                    </button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
+                        <button
+                            className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+                            onClick={() => setSidebarOpen(true)}
+                        >
+                            <Menu size={24} />
+                        </button>
                         <h1 className="text-lg font-semibold text-slate-800">
-                            {navItems.find(n => n.path === pathname)?.label || 'Project Details'}
+                            {navItems.find(n => n.path === pathname)?.label || 'Photobooth Console'}
                         </h1>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
+                            Cairo Airport AI Photobooth
+                        </span>
                     </div>
                 </header>
 

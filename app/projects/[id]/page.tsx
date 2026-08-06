@@ -647,12 +647,6 @@ export default function ProjectDetailPage() {
                         >
                             Generated Images
                         </button>
-                        <button
-                            onClick={() => setActiveTab('featured')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'featured' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Featured
-                        </button>
                         {user.role === UserRole.ADMIN && (
                             <button
                                 onClick={() => setActiveTab('logs')}
