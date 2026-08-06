@@ -92,35 +92,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             console.log('👤 Auth: Fetching profile for', session.user.email);
 
-            // TIMEOUT: Don't wait more than 4 seconds for the profile
-            const fetchPromise = supabase
+            if (!session.user.email) {
+                setUser(null);
+                setLoading(false);
+                return;
+            }
+
+            // 1. Query existing profile
+            const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle();
 
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile fetch timed out')), 4000)
-            );
-
-            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-            if (data) {
+            if (profile) {
                 setUser({
-                    id: data.id,
-                    name: data.full_name || 'Admin User',
-                    email: data.email,
-                    role: (data.role as UserRole) || UserRole.REGULAR,
+                    id: profile.id,
+                    name: profile.full_name || 'Admin User',
+                    email: profile.email,
+                    role: (profile.role as UserRole) || UserRole.REGULAR,
                     assignedProjectIds: []
                 });
-                console.log('✅ Auth: Profile loaded');
-            } else {
-                console.warn('⚠️ Auth: Profile not found. This user might not be in allowed_users.');
-                setUser(null);
+                console.log('✅ Auth: Profile loaded for', profile.email);
+                setLoading(false);
+                return;
             }
+
+            // 2. If profile not found, check if email is in allowed_users whitelist (case-insensitive)
+            console.log('🔍 Auth: Profile missing, checking allowed_users for', session.user.email);
+            const { data: allowedUser } = await supabase
+                .from('allowed_users')
+                .select('*')
+                .ilike('email', session.user.email.trim())
+                .maybeSingle();
+
+            if (allowedUser) {
+                console.log('✨ Auth: User is whitelisted! Provisioning profile...');
+                const newProfileData = {
+                    id: session.user.id,
+                    email: session.user.email,
+                    full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email,
+                    avatar_url: session.user.user_metadata?.avatar_url || null,
+                    role: allowedUser.role || UserRole.REGULAR
+                };
+
+                const { data: createdProfile, error: createError } = await supabase
+                    .from('profiles')
+                    .upsert(newProfileData)
+                    .select()
+                    .single();
+
+                if (createdProfile) {
+                    setUser({
+                        id: createdProfile.id,
+                        name: createdProfile.full_name || 'Admin User',
+                        email: createdProfile.email,
+                        role: (createdProfile.role as UserRole) || UserRole.REGULAR,
+                        assignedProjectIds: []
+                    });
+                    console.log('✅ Auth: Auto-provisioned profile successfully for', createdProfile.email);
+                    setLoading(false);
+                    return;
+                } else {
+                    console.error('❌ Auth: Failed to auto-provision profile:', createError);
+                }
+            } else {
+                console.warn('⚠️ Auth: User email not found in allowed_users whitelist:', session.user.email);
+            }
+
+            setUser(null);
         } catch (error) {
-            console.error('❌ Auth: Profile fetch failed:', error);
-            // On error, we keep user as null so the UI can show a Retry or Change Account button
+            console.error('❌ Auth: Profile fetch/provisioning error:', error);
+            setUser(null);
         } finally {
             setLoading(false);
         }

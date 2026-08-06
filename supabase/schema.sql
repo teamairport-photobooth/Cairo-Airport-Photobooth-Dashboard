@@ -125,6 +125,39 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Trigger: If an existing user in auth.users is whitelisted later, auto-create their profile
+CREATE OR REPLACE FUNCTION public.handle_allowed_user_added()
+RETURNS TRIGGER AS $$
+DECLARE
+    existing_user_id UUID;
+    existing_meta JSONB;
+BEGIN
+    SELECT id, raw_user_meta_data INTO existing_user_id, existing_meta
+    FROM auth.users
+    WHERE LOWER(email) = LOWER(NEW.email);
+
+    IF existing_user_id IS NOT NULL THEN
+        INSERT INTO public.profiles (id, email, full_name, avatar_url, role)
+        VALUES (
+            existing_user_id,
+            NEW.email,
+            coalesce(existing_meta->>'full_name', existing_meta->>'name', NEW.email),
+            existing_meta->>'avatar_url',
+            NEW.role
+        )
+        ON CONFLICT (id) DO UPDATE
+        SET role = EXCLUDED.role;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_allowed_user_added ON public.allowed_users;
+CREATE TRIGGER on_allowed_user_added
+    AFTER INSERT OR UPDATE ON public.allowed_users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_allowed_user_added();
+
 -- 9. Initial Seed Data
 INSERT INTO public.projects (
     name, description, status, daily_limit, current_generations, cloudinary_tag
