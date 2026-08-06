@@ -1,4 +1,4 @@
-# Tasks: Cairo Airport Photobooth Dashboard Migration & Consolidation
+# Tasks: Cairo Airport Photobooth Dashboard Migration & Maintenance
 
 **Feature Directory**: `specs/001-single-project-migration`  
 **Plan**: [plan.md](./plan.md)  
@@ -34,7 +34,7 @@
 
 ## Phase 4: Minimizable Layout & Consolidated Console
 
-- [x] T011 Update minimizable sidebar navigation (Dashboard, User Management, Global Settings) in [components/ClientRootLayout.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/components/ClientRootLayout.tsx)
+- [x] T011 Update minimizable sidebar navigation (Dashboard, User Management, Settings) in [components/ClientRootLayout.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/components/ClientRootLayout.tsx)
 - [x] T012 Consolidate full Cairo Airport AI Photobooth console into main dashboard [app/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/page.tsx)
 - [x] T013 Implement cumulative `total_usage` stat counter and atomic RPC function `increment_project_usage`
 - [x] T014 Implement Recharts generation activity chart with 7D, 30D, 90D, and custom date range pickers
@@ -42,7 +42,16 @@
 
 ---
 
-## Phase 5: Verification & Polish
+## Phase 5: User Story 4 - Cloudinary Storage Cleanup API & External Scheduler Integration
+
+- [x] T019 [US4] Create secure Cloudinary cleanup API endpoint `app/api/cron/cleanup-cloudinary/route.ts` supporting `GET` and `POST` methods, `CRON_SECRET` authorization guard (Bearer header & `?key=` parameter), and Cloudinary SDK bulk deletion logic
+- [x] T020 [US4] Add "Storage Maintenance & Cron Setup" section on Admin Settings page [app/settings/page.tsx](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/app/settings/page.tsx) displaying endpoint URL, `cron-jobs.org` setup instructions (1x, 2x, 3x daily schedules), and a "Run Storage Cleanup Now" manual trigger button
+- [x] T021 [US4] Configure `CRON_SECRET` environment variable in [.env.local](file:///d:/5DVR/Projects/Cairo-Airport-Photobooth/Project/Cairo-Airport-Team-Projects/Cairo-Airport-Photobooth-Dashboard/.env.local)
+- [x] T022 [US4] Execute end-to-end verification of manual cleanup API request, secret authorization guard, and Cloudinary storage asset deletion
+
+---
+
+## Phase 6: Verification & Polish
 
 - [x] T016 Run TypeScript type validation `npx tsc --noEmit` — 0 errors
 - [x] T017 Remove legacy limits, team member assignment panels, and status pills across frontend and schema

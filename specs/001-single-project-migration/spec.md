@@ -1,9 +1,9 @@
-# Feature Specification: Cairo Airport Photobooth Dashboard Migration & Consolidation
+# Feature Specification: Cairo Airport Photobooth Dashboard Migration & Maintenance
 
 **Feature Branch**: `001-single-project-migration`  
 **Created**: 2026-08-05  
 **Updated**: 2026-08-06  
-**Status**: Completed  
+**Status**: In Progress  
 
 ---
 
@@ -25,7 +25,7 @@ As an operator or administrator, I want a single, consolidated dashboard layout 
 
 **Acceptance Scenarios**:
 1. **Given** an authenticated user, **When** they view the main dashboard page, **Then** they see total generation counts, generations activity charts (with 7D, 30D, 90D, and custom date pickers), and photobooth configuration.
-2. **Given** an administrator, **When** they trigger or simulate generation calls via the API integration tool, **Then** the total usage counter increments atomically and logs event timestamps in real time.
+2. **Given** an administrator, **When** they view API Integration settings, **Then** the Endpoint URL is displayed clearly for live integration logging.
 
 ---
 
@@ -38,16 +38,29 @@ As a dashboard user, I want to view generated photobooth images, sort by date, p
 
 ---
 
+### User Story 4 - Automated Cloudinary Cleanup & External Scheduler API (Priority: P2)
+
+As an administrator, I want an external-scheduler-friendly API route (`/api/cron/cleanup-cloudinary`) secured by a secret token (`CRON_SECRET`), so that free external cron services (e.g. cron-jobs.org) can trigger storage cleanup 1, 2, 3, or more times per day without Vercel Hobby plan limitations.
+
+**Acceptance Scenarios**:
+1. **Given** an external cron service (like `cron-jobs.org`) or authorized request, **When** `/api/cron/cleanup-cloudinary` is called with `Authorization: Bearer <CRON_SECRET>` or `?key=<CRON_SECRET>`, **Then** all photobooth images under the project tag are purged from Cloudinary storage and a JSON execution summary is returned.
+2. **Given** an unauthenticated request without valid secret credentials, **When** `/api/cron/cleanup-cloudinary` is called, **Then** HTTP 401 Unauthorized is returned.
+3. **Given** an administrator on the Settings page, **When** they click "Run Storage Cleanup Now", **Then** the cleanup API executes immediately and displays deletion feedback.
+
+---
+
 ## Requirements
 
 ### Functional Requirements
 
 - **FR-001**: Connect exclusively to Supabase backend database for sessions, whitelisted access, and project usage logs.
 - **FR-002**: Enforce invite-only Google OAuth authentication using the `allowed_users` table.
-- **FR-003**: Provide a minimizable/collapsible sidebar navigation system containing **Dashboard**, **User Management** (Admin), and **Global Settings** (Admin).
+- **FR-003**: Provide a minimizable/collapsible sidebar navigation system containing **Dashboard**, **User Management** (Admin), and **Settings** (Admin).
 - **FR-004**: Track cumulative generation usage (`total_usage`) on the project record with atomic incrementing via PostgreSQL RPC (`increment_project_usage`).
 - **FR-005**: Render historical generation activity charts using Recharts with flexible range filtering (7D, 30D, 90D, Custom date picker).
 - **FR-006**: Integrate Cloudinary media fetching for the photobooth tag with sorting, multi-select bulk downloads, and detailed metadata inspection.
+- **FR-007**: Provide a secure API endpoint (`/api/cron/cleanup-cloudinary`) supporting `GET` and `POST` requests protected by `CRON_SECRET` (Authorization header or `key` parameter).
+- **FR-008**: Support 100% free external cron schedulers (such as `cron-jobs.org`) allowing multiple scheduled runs per day (1x, 2x, 3x daily), as well as a manual trigger button on the Admin Settings page.
 
 ---
 
@@ -57,3 +70,4 @@ As a dashboard user, I want to view generated photobooth images, sort by date, p
 - **Profile**: Authenticated user profile mapped automatically upon whitelisted Google sign-in.
 - **Project**: Mapped configuration for Cairo Airport AI Photobooth containing `total_usage` and Cloudinary settings.
 - **UsageLog**: Timestamped log record tracking individual generation events.
+- **CronSecret**: Secure token (`CRON_SECRET`) used to authenticate external cron services and manual admin requests.

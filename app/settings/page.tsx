@@ -5,7 +5,21 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
 import { UserRole } from '@/types';
 import { supabase } from '@/utils/supabase';
-import { Save, Cloud, ShieldCheck, Key, Loader2, AlertCircle, FolderKanban, Sliders } from 'lucide-react';
+import {
+    Save,
+    Cloud,
+    ShieldCheck,
+    Key,
+    Loader2,
+    AlertCircle,
+    FolderKanban,
+    Trash2,
+    Clock,
+    Copy,
+    Check,
+    ExternalLink,
+    Zap
+} from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, isAuthenticated } = useAuth();
@@ -28,6 +42,19 @@ export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [error, setError] = useState('');
+
+    // Storage Cleanup State
+    const [isPurging, setIsPurging] = useState(false);
+    const [purgeResult, setPurgeResult] = useState<{ success: boolean; message: string; deletedCount?: number } | null>(null);
+    const [copiedUrl, setCopiedUrl] = useState(false);
+    const [copiedHeader, setCopiedHeader] = useState(false);
+    const [origin, setOrigin] = useState('');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setOrigin(window.location.origin);
+        }
+    }, []);
 
     useEffect(() => {
         if (!isAuthenticated || (user && user.role !== UserRole.ADMIN)) {
@@ -132,14 +159,73 @@ export default function SettingsPage() {
         }
     };
 
+    const handleManualPurge = async () => {
+        if (isPurging) return;
+
+        const confirmPurge = window.confirm(
+            `Are you sure you want to delete ALL photobooth images matching tag "${projectForm.cloudinaryTag}" from Cloudinary storage?`
+        );
+        if (!confirmPurge) return;
+
+        setIsPurging(true);
+        setPurgeResult(null);
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/cron/cleanup-cloudinary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-supabase-auth': session?.access_token || ''
+                }
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                setPurgeResult({
+                    success: true,
+                    message: data.message || 'Storage cleanup completed successfully.',
+                    deletedCount: data.deletedCount || 0
+                });
+            } else {
+                setPurgeResult({
+                    success: false,
+                    message: data.error || 'Failed to execute storage cleanup.'
+                });
+            }
+        } catch (err: any) {
+            setPurgeResult({
+                success: false,
+                message: err.message || 'Network error executing storage cleanup.'
+            });
+        } finally {
+            setIsPurging(false);
+        }
+    };
+
+    const copyToClipboard = (text: string, type: 'url' | 'header') => {
+        navigator.clipboard.writeText(text);
+        if (type === 'url') {
+            setCopiedUrl(true);
+            setTimeout(() => setCopiedUrl(false), 2000);
+        } else {
+            setCopiedHeader(true);
+            setTimeout(() => setCopiedHeader(false), 2000);
+        }
+    };
+
     if (!user || user.role !== UserRole.ADMIN) return null;
 
+    const cleanupApiUrl = `${origin}/api/cron/cleanup-cloudinary`;
+    const cronAuthHeader = `Bearer cairo_photobooth_cron_secret_2026`;
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
+        <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto pb-16">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Settings</h2>
-                    <p className="text-slate-500 text-sm mt-1">Manage photobooth details, tags, and Cloudinary credentials.</p>
+                    <p className="text-slate-500 text-sm mt-1">Manage photobooth details, tags, Cloudinary credentials, and daily cleanup tasks.</p>
                 </div>
                 <button
                     onClick={fetchSettings}
@@ -156,158 +242,261 @@ export default function SettingsPage() {
                     <p className="font-medium">Loading configurations...</p>
                 </div>
             ) : (
-                <form onSubmit={handleSave} className="space-y-8">
-                    {error && (
-                        <div className="flex items-center gap-3 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold border border-red-100">
-                            <AlertCircle size={18} />
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Section 1: Photobooth Details */}
-                    <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
-                                    <FolderKanban size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800">Photobooth Details & Asset Tag</h3>
-                                    <p className="text-xs text-slate-500">Configure display name, description, and asset tag.</p>
-                                </div>
+                <div className="space-y-8">
+                    <form onSubmit={handleSave} className="space-y-8">
+                        {error && (
+                            <div className="flex items-center gap-3 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold border border-red-100">
+                                <AlertCircle size={18} />
+                                {error}
                             </div>
-                        </div>
+                        )}
 
-                        <div className="p-8 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Photobooth Name</label>
-                                    <input
-                                        type="text"
-                                        value={projectForm.name}
-                                        onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                        placeholder="e.g. Cairo Airport AI Photobooth"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cloudinary Asset Tag / Folder</label>
-                                    <input
-                                        type="text"
-                                        value={projectForm.cloudinaryTag}
-                                        onChange={e => setProjectForm({ ...projectForm, cloudinaryTag: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
-                                        placeholder="e.g. cairo-airport-photobooth"
-                                        required
-                                    />
+                        {/* Section 1: Photobooth Details */}
+                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                            <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
+                                        <FolderKanban size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">Photobooth Details & Asset Tag</h3>
+                                        <p className="text-xs text-slate-500">Configure display name, description, and asset tag.</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Description</label>
-                                <textarea
-                                    value={projectForm.description}
-                                    onChange={e => setProjectForm({ ...projectForm, description: e.target.value })}
-                                    className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                    placeholder="Description..."
-                                    rows={3}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Section 2: Cloudinary Credentials */}
-                    <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
-                                    <Cloud size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800">Cloudinary Credentials</h3>
-                                    <p className="text-xs text-slate-500">API credentials for fetching photobooth images.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                                <ShieldCheck size={12} />
-                                Encrypted Storage
-                            </div>
-                        </div>
-
-                        <div className="p-8 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cloud Name</label>
-                                    <input
-                                        type="text"
-                                        value={globalForm.cloudinaryCloudName}
-                                        onChange={e => setGlobalForm({ ...globalForm, cloudinaryCloudName: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
-                                        placeholder="Cloud Name"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">API Key</label>
-                                    <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                            <Key size={18} />
-                                        </div>
+                            <div className="p-8 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Photobooth Name</label>
                                         <input
                                             type="text"
-                                            value={globalForm.cloudinaryApiKey}
-                                            onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiKey: e.target.value })}
+                                            value={projectForm.name}
+                                            onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                            placeholder="e.g. Cairo Airport AI Photobooth"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Cloudinary Asset Tag / Folder</label>
+                                        <input
+                                            type="text"
+                                            value={projectForm.cloudinaryTag}
+                                            onChange={e => setProjectForm({ ...projectForm, cloudinaryTag: e.target.value })}
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                            placeholder="e.g. cairo-airport-photobooth"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Description</label>
+                                    <textarea
+                                        value={projectForm.description}
+                                        onChange={e => setProjectForm({ ...projectForm, description: e.target.value })}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        placeholder="Description..."
+                                        rows={3}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 2: Cloudinary Credentials */}
+                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                            <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
+                                        <Cloud size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">Cloudinary Credentials</h3>
+                                        <p className="text-xs text-slate-500">API credentials for fetching photobooth images.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                                    <ShieldCheck size={12} />
+                                    Encrypted Storage
+                                </div>
+                            </div>
+
+                            <div className="p-8 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Cloud Name</label>
+                                        <input
+                                            type="text"
+                                            value={globalForm.cloudinaryCloudName}
+                                            onChange={e => setGlobalForm({ ...globalForm, cloudinaryCloudName: e.target.value })}
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                            placeholder="Cloud Name"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">API Key</label>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                                <Key size={18} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={globalForm.cloudinaryApiKey}
+                                                onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiKey: e.target.value })}
+                                                className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                                placeholder="API Key"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">API Secret</label>
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                            <ShieldCheck size={18} />
+                                        </div>
+                                        <input
+                                            type="password"
+                                            value={globalForm.cloudinaryApiSecret}
+                                            onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiSecret: e.target.value })}
                                             className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
-                                            placeholder="API Key"
+                                            placeholder="••••••••••••••••"
                                             required
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">API Secret</label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                        <ShieldCheck size={18} />
+                            <div className="px-8 py-6 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4">
+                                {saveSuccess && (
+                                    <p className="text-emerald-600 font-bold text-sm animate-in fade-in slide-in-from-right-2">
+                                        Settings saved successfully!
+                                    </p>
+                                )}
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className={`
+                                        flex items-center gap-2 px-8 py-3 rounded-2xl font-bold transition-all shadow-lg
+                                        ${isSaving
+                                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                            : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-indigo-200'}
+                                    `}
+                                >
+                                    {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                                    {isSaving ? 'Saving...' : 'Save Settings'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    {/* Section 3: Storage Maintenance & Daily Cron Setup */}
+                    <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div className="bg-slate-900 text-white px-8 py-6 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-rose-500/20 rounded-xl text-rose-400 border border-rose-500/30">
+                                    <Trash2 size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white text-lg">Storage Maintenance & Cron Setup</h3>
+                                    <p className="text-xs text-slate-400">Purge Cloudinary images and configure free daily scheduled cleanups.</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleManualPurge}
+                                disabled={isPurging}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${
+                                    isPurging
+                                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                        : 'bg-rose-600 text-white hover:bg-rose-700 active:scale-95 shadow-lg shadow-rose-900/30'
+                                }`}
+                            >
+                                {isPurging ? <Loader2 className="animate-spin" size={18} /> : <Trash2 size={18} />}
+                                {isPurging ? 'Purging Storage...' : 'Run Storage Cleanup Now'}
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            {/* Purge Result Feedback Banner */}
+                            {purgeResult && (
+                                <div className={`p-4 rounded-2xl border text-sm font-bold flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300 ${
+                                    purgeResult.success
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                        : 'bg-red-50 text-red-800 border-red-200'
+                                }`}>
+                                    <div className="flex items-center gap-3">
+                                        {purgeResult.success ? <Check className="text-emerald-600" size={20} /> : <AlertCircle className="text-red-600" size={20} />}
+                                        <span>{purgeResult.message}</span>
                                     </div>
-                                    <input
-                                        type="password"
-                                        value={globalForm.cloudinaryApiSecret}
-                                        onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiSecret: e.target.value })}
-                                        className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
-                                        placeholder="••••••••••••••••"
-                                        required
-                                    />
+                                    {purgeResult.deletedCount !== undefined && (
+                                        <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-full text-xs font-black">
+                                            {purgeResult.deletedCount} images deleted
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* External Cron Setup Instructions */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                        <Clock size={16} className="text-indigo-600" />
+                                        Setup Automated Scheduled Cron (cron-jobs.org)
+                                    </h4>
+                                    <a
+                                        href="https://cron-jobs.org"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:underline"
+                                    >
+                                        Visit cron-jobs.org (Free) <ExternalLink size={12} />
+                                    </a>
+                                </div>
+
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    You can schedule an automated cleanup job (1x, 2x, or 3x daily for free) on <strong className="text-slate-700">cron-jobs.org</strong> or any external cron service using the parameters below:
+                                </p>
+
+                                <div className="space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Endpoint URL</label>
+                                        <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-slate-200">
+                                            <code className="text-indigo-600 text-xs font-mono flex-1 truncate">{cleanupApiUrl}</code>
+                                            <button
+                                                onClick={() => copyToClipboard(cleanupApiUrl, 'url')}
+                                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                                                title="Copy URL"
+                                            >
+                                                {copiedUrl ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Authorization Header</label>
+                                        <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-slate-200">
+                                            <code className="text-slate-700 text-xs font-mono flex-1 truncate">Authorization: {cronAuthHeader}</code>
+                                            <button
+                                                onClick={() => copyToClipboard(cronAuthHeader, 'header')}
+                                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                                                title="Copy Header"
+                                            >
+                                                {copiedHeader ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4">
-                            {saveSuccess && (
-                                <p className="text-emerald-600 font-bold text-sm animate-in fade-in slide-in-from-right-2">
-                                    Settings saved successfully!
-                                </p>
-                            )}
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className={`
-                                    flex items-center gap-2 px-8 py-3 rounded-2xl font-bold transition-all shadow-lg
-                                    ${isSaving
-                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-indigo-200'}
-                                `}
-                            >
-                                {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                                {isSaving ? 'Saving...' : 'Save Settings'}
-                            </button>
-                        </div>
                     </div>
-                </form>
+                </div>
             )}
         </div>
     );
