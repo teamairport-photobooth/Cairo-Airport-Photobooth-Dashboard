@@ -22,9 +22,6 @@ export interface Project {
   // Stats
   totalUsage?: number;
   total_usage?: number; // Supabase map
-  // Status
-  status: 'active' | 'paused';
-  is_active?: boolean; // Supabase map
   // Cloudinary
   cloudinaryCloudName?: string;
   cloudinaryTag?: string;

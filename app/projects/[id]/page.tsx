@@ -133,7 +133,6 @@ export default function ProjectDetailPage() {
                 totalUsage: p.total_usage || 0,
                 createdAt: p.created_at,
                 ownerId: p.created_by || '',
-                status: p.is_active ? 'active' : 'paused',
                 cloudinaryCloudName: finalCloudName,
                 cloudinaryTag: p.cloudinary_tag,
                 cloudinaryApiKey: finalApiKey,
@@ -680,9 +679,6 @@ export default function ProjectDetailPage() {
                                             <span className="text-4xl font-black text-slate-800">{(project.totalUsage || 0).toLocaleString()}</span>
                                             <span className="text-slate-400 font-medium">total images generated</span>
                                         </div>
-                                    </div>
-                                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${project.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                                        {project.status}
                                     </div>
                                 </div>
                                 <p className="text-xs text-slate-400 mt-4">Continuous generation enabled with no usage cap</p>

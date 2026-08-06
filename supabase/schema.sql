@@ -24,9 +24,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     description TEXT,
-    status TEXT NOT NULL DEFAULT 'active', -- 'active', 'paused'
     total_usage INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT true,
     cloudinary_cloud_name TEXT,
     cloudinary_api_key TEXT,
     cloudinary_api_secret TEXT,
@@ -187,9 +185,9 @@ CREATE TRIGGER on_allowed_user_removed
 
 -- 9. Initial Seed Data
 INSERT INTO public.projects (
-    name, description, status, cloudinary_tag
+    name, description, cloudinary_tag
 ) VALUES (
-    'Cairo Airport AI Photobooth', 'Main AI Photobooth instance at Cairo International Airport', 'active', 'cairo-airport-photobooth'
+    'Cairo Airport AI Photobooth', 'Main AI Photobooth instance at Cairo International Airport', 'cairo-airport-photobooth'
 ) ON CONFLICT DO NOTHING;
 
 INSERT INTO public.global_settings (id) VALUES ('current') ON CONFLICT DO NOTHING;
