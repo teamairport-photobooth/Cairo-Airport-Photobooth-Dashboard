@@ -73,9 +73,11 @@ CREATE POLICY "Allow authenticated manage allowed_users" ON public.allowed_users
 DROP POLICY IF EXISTS "Profiles public read" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Allow insert profile" ON public.profiles;
+DROP POLICY IF EXISTS "Allow delete profile" ON public.profiles;
 CREATE POLICY "Profiles public read" ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Allow insert profile" ON public.profiles FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow delete profile" ON public.profiles FOR DELETE USING (true);
 
 -- Projects & Settings RLS
 DROP POLICY IF EXISTS "Public read projects" ON public.projects;

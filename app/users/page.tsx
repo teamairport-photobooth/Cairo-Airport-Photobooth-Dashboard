@@ -97,21 +97,25 @@ export default function UserManagementPage() {
         }
     };
 
-    const handleDeleteUser = async (email: string, profileId?: string) => {
+    const handleDeleteUser = async (email: string, targetProfileId?: string) => {
         if (!confirm(`Are you sure you want to revoke access and delete profile for ${email}?`)) return;
 
         setLoading(true);
         try {
             const cleanEmail = email.toLowerCase().trim();
 
-            // 1. Remove from Whitelist
-            const { error: wError } = await supabase
-                .from('allowed_users')
-                .delete()
-                .ilike('email', cleanEmail);
-            if (wError) throw wError;
+            // 1. Resolve profileId if not passed directly
+            let profileId = targetProfileId;
+            if (!profileId) {
+                const { data: p } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .ilike('email', cleanEmail)
+                    .maybeSingle();
+                if (p) profileId = p.id;
+            }
 
-            // 2. Unlink any projects created by this user
+            // 2. Unlink any projects created by this user profile
             if (profileId) {
                 const { error: pUpdateError } = await supabase
                     .from('projects')
@@ -120,17 +124,24 @@ export default function UserManagementPage() {
                 if (pUpdateError) console.warn('Could not detach projects:', pUpdateError);
             }
 
-            // 3. Delete profile record matching email
+            // 3. Remove from allowed_users whitelist
+            const { error: wError } = await supabase
+                .from('allowed_users')
+                .delete()
+                .ilike('email', cleanEmail);
+            if (wError) throw wError;
+
+            // 4. Delete profile record matching email
             const { error: pDeleteError } = await supabase
                 .from('profiles')
                 .delete()
                 .ilike('email', cleanEmail);
             if (pDeleteError) console.warn('Profile deletion note:', pDeleteError);
 
-            fetchData();
+            await fetchData();
         } catch (err: any) {
             console.error('Error deleting user:', err);
-            alert(`Failed to delete user: ${err.message}`);
+            alert(`Failed to delete user: ${err.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
