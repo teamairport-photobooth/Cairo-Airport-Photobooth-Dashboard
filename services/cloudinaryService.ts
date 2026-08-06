@@ -31,40 +31,12 @@ export const deleteCloudinaryFolderImages = async (cloudName: string, apiKey: st
     });
 
     try {
-        let totalDeleted = 0;
-        const cleanFolder = folderName.replace(/\/+$/, ''); // e.g. "cairo-airport-photobooth"
+        const folderPrefix = folderName.replace(/\/+$/, '') + '/';
 
-        // 1. Delete all resources stored under the folder prefix
-        const prefixesToTry = [cleanFolder, `${cleanFolder}/`];
-
-        for (const prefix of prefixesToTry) {
-            let hasMore = true;
-            while (hasMore) {
-                const result = await cloudinary.api.delete_resources_by_prefix(prefix, {
-                    resource_type: 'image',
-                    type: 'upload'
-                });
-                const deletedMap = result.deleted || {};
-                const count = Object.keys(deletedMap).length;
-                totalDeleted += count;
-
-                if (count === 0 || !result.partial) {
-                    hasMore = false;
-                }
-            }
-        }
-
-        // 2. Also attempt deletion by tag in case assets were tagged with the folder name
-        try {
-            const tagResult = await cloudinary.api.delete_resources_by_tag(cleanFolder);
-            const tagDeletedMap = tagResult.deleted || {};
-            const count = Object.keys(tagDeletedMap).length;
-            totalDeleted += count;
-        } catch (err) {
-            // Tag delete throws if no resources match tag, safe to ignore
-        }
-
-        return totalDeleted;
+        // Delete all resources inside the folder using Cloudinary's direct prefix API
+        const result: any = await cloudinary.api.delete_resources_by_prefix(folderPrefix);
+        const deletedMap = result.deleted || {};
+        return Object.keys(deletedMap).length;
     } catch (error) {
         console.error('Cloudinary Folder Delete Error:', error);
         throw error;
