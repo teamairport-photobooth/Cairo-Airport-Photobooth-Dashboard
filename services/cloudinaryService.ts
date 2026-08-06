@@ -70,30 +70,6 @@ export const deleteCloudinaryFolderImages = async (cloudName: string, apiKey: st
             console.warn('delete_resources_by_tag note:', err.message);
         }
 
-        // Method 5: Cloudinary Search API Fallback for any remaining matching assets
-        try {
-            const searchRes: any = await cloudinary.search
-                .expression(`folder="${cleanFolder}" OR asset_folder="${cleanFolder}" OR tags="${cleanFolder}"`)
-                .max_results(500)
-                .execute();
-
-            const foundResources = searchRes.resources || [];
-            const remainingPublicIds = foundResources
-                .map((r: any) => r.public_id)
-                .filter((id: string) => !deletedIds.has(id));
-
-            if (remainingPublicIds.length > 0) {
-                for (let i = 0; i < remainingPublicIds.length; i += 100) {
-                    const chunk = remainingPublicIds.slice(i, i + 100);
-                    const delRes: any = await cloudinary.api.delete_resources(chunk);
-                    const delMap = delRes.deleted || {};
-                    Object.keys(delMap).forEach(id => deletedIds.add(id));
-                }
-            }
-        } catch (err: any) {
-            console.warn('Search fallback note:', err.message);
-        }
-
         return deletedIds.size;
     } catch (error) {
         console.error('Cloudinary Folder Delete Error:', error);
