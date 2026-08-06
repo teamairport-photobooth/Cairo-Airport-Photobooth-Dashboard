@@ -31,12 +31,70 @@ export const deleteCloudinaryFolderImages = async (cloudName: string, apiKey: st
     });
 
     try {
-        const folderPrefix = folderName.replace(/\/+$/, '') + '/';
+        const cleanFolder = folderName.replace(/\/+$/, '');
+        const deletedIds = new Set<string>();
 
-        // Delete all resources inside the folder using Cloudinary's direct prefix API
-        const result: any = await cloudinary.api.delete_resources_by_prefix(folderPrefix);
-        const deletedMap = result.deleted || {};
-        return Object.keys(deletedMap).length;
+        // Method 1: Modern Cloudinary Asset Folder Deletion (Matches UI folder)
+        try {
+            const resA: any = await (cloudinary.api as any).delete_resources_by_asset_folder(cleanFolder);
+            const deletedA = resA.deleted || {};
+            Object.keys(deletedA).forEach(id => deletedIds.add(id));
+        } catch (err: any) {
+            console.warn('delete_resources_by_asset_folder note:', err.message);
+        }
+
+        // Method 2: Public ID Prefix Deletion with slash ("folder/")
+        try {
+            const resB: any = await cloudinary.api.delete_resources_by_prefix(`${cleanFolder}/`);
+            const deletedB = resB.deleted || {};
+            Object.keys(deletedB).forEach(id => deletedIds.add(id));
+        } catch (err: any) {
+            console.warn('delete_resources_by_prefix(slash) note:', err.message);
+        }
+
+        // Method 3: Public ID Prefix Deletion without slash ("folder")
+        try {
+            const resC: any = await cloudinary.api.delete_resources_by_prefix(cleanFolder);
+            const deletedC = resC.deleted || {};
+            Object.keys(deletedC).forEach(id => deletedIds.add(id));
+        } catch (err: any) {
+            console.warn('delete_resources_by_prefix(no-slash) note:', err.message);
+        }
+
+        // Method 4: Tag-based Deletion
+        try {
+            const resD: any = await cloudinary.api.delete_resources_by_tag(cleanFolder);
+            const deletedD = resD.deleted || {};
+            Object.keys(deletedD).forEach(id => deletedIds.add(id));
+        } catch (err: any) {
+            console.warn('delete_resources_by_tag note:', err.message);
+        }
+
+        // Method 5: Cloudinary Search API Fallback for any remaining matching assets
+        try {
+            const searchRes: any = await cloudinary.search
+                .expression(`folder="${cleanFolder}" OR asset_folder="${cleanFolder}" OR tags="${cleanFolder}"`)
+                .max_results(500)
+                .execute();
+
+            const foundResources = searchRes.resources || [];
+            const remainingPublicIds = foundResources
+                .map((r: any) => r.public_id)
+                .filter((id: string) => !deletedIds.has(id));
+
+            if (remainingPublicIds.length > 0) {
+                for (let i = 0; i < remainingPublicIds.length; i += 100) {
+                    const chunk = remainingPublicIds.slice(i, i + 100);
+                    const delRes: any = await cloudinary.api.delete_resources(chunk);
+                    const delMap = delRes.deleted || {};
+                    Object.keys(delMap).forEach(id => deletedIds.add(id));
+                }
+            }
+        } catch (err: any) {
+            console.warn('Search fallback note:', err.message);
+        }
+
+        return deletedIds.size;
     } catch (error) {
         console.error('Cloudinary Folder Delete Error:', error);
         throw error;
