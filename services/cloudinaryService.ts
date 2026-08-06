@@ -32,45 +32,76 @@ export const deleteCloudinaryFolderImages = async (cloudName: string, apiKey: st
 
     try {
         const cleanFolder = folderName.replace(/\/+$/, '');
-        const deletedIds = new Set<string>();
+        const publicIdsSet = new Set<string>();
 
-        // Method 1: Modern Cloudinary Asset Folder Deletion (Matches UI folder)
+        // 1. List assets in asset folder via standard Free Admin API (resources_by_asset_folder)
         try {
-            const resA: any = await (cloudinary.api as any).delete_resources_by_asset_folder(cleanFolder);
-            const deletedA = resA.deleted || {};
-            Object.keys(deletedA).forEach(id => deletedIds.add(id));
+            let nextCursor: string | undefined = undefined;
+            do {
+                const res: any = await (cloudinary.api as any).resources_by_asset_folder(cleanFolder, {
+                    max_results: 500,
+                    next_cursor: nextCursor
+                });
+                (res.resources || []).forEach((r: any) => publicIdsSet.add(r.public_id));
+                nextCursor = res.next_cursor;
+            } while (nextCursor);
         } catch (err: any) {
-            console.warn('delete_resources_by_asset_folder note:', err.message);
+            console.warn('resources_by_asset_folder note:', err.message);
         }
 
-        // Method 2: Public ID Prefix Deletion with slash ("folder/")
-        try {
-            const resB: any = await cloudinary.api.delete_resources_by_prefix(`${cleanFolder}/`);
-            const deletedB = resB.deleted || {};
-            Object.keys(deletedB).forEach(id => deletedIds.add(id));
-        } catch (err: any) {
-            console.warn('delete_resources_by_prefix(slash) note:', err.message);
+        // 2. List assets by public_id prefix (folder/ and folder) via standard Free Admin API
+        for (const prefix of [`${cleanFolder}/`, cleanFolder]) {
+            try {
+                let nextCursor: string | undefined = undefined;
+                do {
+                    const res: any = await cloudinary.api.resources({
+                        type: 'upload',
+                        prefix: prefix,
+                        max_results: 500,
+                        next_cursor: nextCursor
+                    });
+                    (res.resources || []).forEach((r: any) => publicIdsSet.add(r.public_id));
+                    nextCursor = res.next_cursor;
+                } while (nextCursor);
+            } catch (err: any) {
+                // Ignore prefix lookup note
+            }
         }
 
-        // Method 3: Public ID Prefix Deletion without slash ("folder")
+        // 3. List assets by tag via standard Free Admin API
         try {
-            const resC: any = await cloudinary.api.delete_resources_by_prefix(cleanFolder);
-            const deletedC = resC.deleted || {};
-            Object.keys(deletedC).forEach(id => deletedIds.add(id));
+            let nextCursor: string | undefined = undefined;
+            do {
+                const res: any = await cloudinary.api.resources_by_tag(cleanFolder, {
+                    max_results: 500,
+                    next_cursor: nextCursor
+                });
+                (res.resources || []).forEach((r: any) => publicIdsSet.add(r.public_id));
+                nextCursor = res.next_cursor;
+            } while (nextCursor);
         } catch (err: any) {
-            console.warn('delete_resources_by_prefix(no-slash) note:', err.message);
+            // Ignore tag lookup note
         }
 
-        // Method 4: Tag-based Deletion
-        try {
-            const resD: any = await cloudinary.api.delete_resources_by_tag(cleanFolder);
-            const deletedD = resD.deleted || {};
-            Object.keys(deletedD).forEach(id => deletedIds.add(id));
-        } catch (err: any) {
-            console.warn('delete_resources_by_tag note:', err.message);
+        const publicIds = Array.from(publicIdsSet);
+        let totalDeleted = 0;
+
+        // 4. Batch delete all discovered assets via standard Free Admin API (delete_resources)
+        if (publicIds.length > 0) {
+            const chunkSize = 100;
+            for (let i = 0; i < publicIds.length; i += chunkSize) {
+                const chunk = publicIds.slice(i, i + chunkSize);
+                try {
+                    const deleteRes: any = await cloudinary.api.delete_resources(chunk);
+                    const deletedMap = deleteRes.deleted || {};
+                    totalDeleted += Object.keys(deletedMap).length;
+                } catch (err) {
+                    console.error('Error deleting chunk:', err);
+                }
+            }
         }
 
-        return deletedIds.size;
+        return totalDeleted;
     } catch (error) {
         console.error('Cloudinary Folder Delete Error:', error);
         throw error;
