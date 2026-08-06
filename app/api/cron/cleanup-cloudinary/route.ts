@@ -4,17 +4,17 @@ import { deleteCloudinaryFolderImages } from '@/services/cloudinaryService';
 
 export async function handleCleanup(req: NextRequest) {
     try {
-        const cronSecret = process.env.CRON_SECRET;
+        const cronSecret = process.env.CRON_SECRET ? process.env.CRON_SECRET.trim() : null;
 
         // 1. Authorization Guard
-        const authHeader = req.headers.get('authorization');
+        const authHeader = req.headers.get('authorization')?.trim();
         const url = new URL(req.url);
-        const queryKey = url.searchParams.get('key');
+        const queryKey = url.searchParams.get('key')?.trim();
 
         let isAuthorized = false;
 
         if (cronSecret) {
-            if (authHeader && authHeader.toLowerCase() === `bearer ${cronSecret.toLowerCase()}`) {
+            if (authHeader && authHeader === `Bearer ${cronSecret}`) {
                 isAuthorized = true;
             } else if (queryKey && queryKey === cronSecret) {
                 isAuthorized = true;
