@@ -92,7 +92,8 @@ export default function CronJobsPage() {
         secretHeader: '',
         enabled: true,
         timezone: 'Africa/Cairo',
-        frequencyPreset: 'daily_midnight', // daily_midnight, every_12h, every_hour, every_15m
+        frequencyPreset: 'every_12h', // every_12h, daily_7am, custom_daily
+        customDailyTime: '07:00'
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -207,22 +208,26 @@ export default function CronJobsPage() {
             secretHeader: defaultSecret,
             enabled: true,
             timezone: 'Africa/Cairo',
-            frequencyPreset: 'daily_midnight'
+            frequencyPreset: 'every_12h',
+            customDailyTime: '07:00'
         });
         setShowCreateModal(true);
     };
 
     const openEditModal = (job: CronJob) => {
-        let preset = 'custom';
+        let preset = 'custom_daily';
+        let timeVal = '07:00';
+
         const schedule: Partial<CronJobSchedule> = job.schedule || {};
-        if (schedule.hours?.length === 1 && schedule.hours[0] === 0 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
-            preset = 'daily_midnight';
-        } else if (schedule.hours?.length === 2 && schedule.hours[0] === 0 && schedule.hours[1] === 12 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
+        if (schedule.hours?.length === 2 && schedule.hours[0] === 0 && schedule.hours[1] === 12 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
             preset = 'every_12h';
-        } else if (schedule.hours?.length === 1 && schedule.hours[0] === -1 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
-            preset = 'every_hour';
-        } else if (schedule.minutes?.length === 4 && schedule.minutes.join(',') === '0,15,30,45') {
-            preset = 'every_15m';
+        } else if (schedule.hours?.length === 1 && schedule.hours[0] === 7 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
+            preset = 'daily_7am';
+        } else if (schedule.hours?.length === 1 && schedule.minutes?.length === 1) {
+            preset = 'custom_daily';
+            const h = String(schedule.hours[0]).padStart(2, '0');
+            const m = String(schedule.minutes[0]).padStart(2, '0');
+            timeVal = `${h}:${m}`;
         }
 
         // Extract secret header if present
@@ -239,40 +244,38 @@ export default function CronJobsPage() {
             secretHeader: extractedSecret || defaultSecret,
             enabled: job.enabled,
             timezone: schedule.timezone || 'Africa/Cairo',
-            frequencyPreset: preset
+            frequencyPreset: preset,
+            customDailyTime: timeVal
         });
         setEditingJob(job);
     };
 
-    const getSchedulePayload = (preset: string, timezone: string): CronJobSchedule => {
-        let hours = [-1];
+    const getSchedulePayload = (preset: string, timezone: string, customDailyTime: string): CronJobSchedule => {
+        let hours = [0, 12];
         let minutes = [0];
-        let mdays = [-1];
-        let months = [-1];
-        let wdays = [-1];
 
-        if (preset === 'daily_midnight') {
-            hours = [0];
-            minutes = [0];
-        } else if (preset === 'every_12h') {
+        if (preset === 'every_12h') {
             hours = [0, 12];
             minutes = [0];
-        } else if (preset === 'every_hour') {
-            hours = [-1];
+        } else if (preset === 'daily_7am') {
+            hours = [7];
             minutes = [0];
-        } else if (preset === 'every_15m') {
-            hours = [-1];
-            minutes = [0, 15, 30, 45];
+        } else if (preset === 'custom_daily') {
+            const [hStr, mStr] = (customDailyTime || '07:00').split(':');
+            const h = parseInt(hStr, 10);
+            const m = parseInt(mStr, 10);
+            hours = [isNaN(h) ? 7 : h];
+            minutes = [isNaN(m) ? 0 : m];
         }
 
         return {
             timezone,
             expiresAt: 0,
             hours,
-            mdays,
+            mdays: [-1],
             minutes,
-            months,
-            wdays
+            months: [-1],
+            wdays: [-1]
         };
     };
 
@@ -280,7 +283,7 @@ export default function CronJobsPage() {
         e.preventDefault();
         setIsSaving(true);
 
-        const schedule = getSchedulePayload(formData.frequencyPreset, formData.timezone);
+        const schedule = getSchedulePayload(formData.frequencyPreset, formData.timezone, formData.customDailyTime);
         
         // Build extendedData with Authorization header
         const formattedSecret = formData.secretHeader.trim();
@@ -350,18 +353,17 @@ export default function CronJobsPage() {
 
     const formatSchedule = (schedule?: CronJobSchedule) => {
         if (!schedule) return 'Custom Schedule';
-        const tz = schedule.timezone || 'UTC';
-        if (schedule.hours?.length === 1 && schedule.hours[0] === 0 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
-            return `Daily at Midnight (00:00) • ${tz}`;
-        }
+        const tz = schedule.timezone || 'Africa/Cairo';
         if (schedule.hours?.length === 2 && schedule.hours[0] === 0 && schedule.hours[1] === 12) {
-            return `Every 12 Hours (00:00, 12:00) • ${tz}`;
+            return `Every 12 Hours (00:00 & 12:00) • ${tz}`;
         }
-        if (schedule.hours?.length === 1 && schedule.hours[0] === -1 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
-            return `Every Hour • ${tz}`;
+        if (schedule.hours?.length === 1 && schedule.hours[0] === 7 && schedule.minutes?.length === 1 && schedule.minutes[0] === 0) {
+            return `Daily at 7:00 AM (07:00) • ${tz}`;
         }
-        if (schedule.minutes?.length === 4 && schedule.minutes.join(',') === '0,15,30,45') {
-            return `Every 15 Minutes • ${tz}`;
+        if (schedule.hours?.length === 1 && schedule.minutes?.length === 1) {
+            const h = String(schedule.hours[0]).padStart(2, '0');
+            const m = String(schedule.minutes[0]).padStart(2, '0');
+            return `Daily at ${h}:${m} • ${tz}`;
         }
         return `Custom Schedule • ${tz}`;
     };
@@ -672,7 +674,7 @@ export default function CronJobsPage() {
                                     value={formData.title}
                                     onChange={e => setFormData({ ...formData, title: e.target.value })}
                                     placeholder="e.g. Bulk Storage Cleanup"
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                                 />
                             </div>
 
@@ -754,13 +756,32 @@ export default function CronJobsPage() {
                                         onChange={e => setFormData({ ...formData, frequencyPreset: e.target.value })}
                                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
                                     >
-                                        <option value="daily_midnight">Daily at Midnight (00:00)</option>
                                         <option value="every_12h">Every 12 Hours (00:00 & 12:00)</option>
-                                        <option value="every_hour">Every Hour</option>
-                                        <option value="every_15m">Every 15 Minutes</option>
+                                        <option value="daily_7am">Daily at 7:00 AM (07:00)</option>
+                                        <option value="custom_daily">Custom Daily Time...</option>
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Custom Daily Time Input */}
+                            {formData.frequencyPreset === 'custom_daily' && (
+                                <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 space-y-2 animate-in fade-in duration-200">
+                                    <label className="block text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <Clock size={14} className="text-indigo-600" />
+                                        Custom Daily Execution Time
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={formData.customDailyTime}
+                                        onChange={e => setFormData({ ...formData, customDailyTime: e.target.value })}
+                                        className="w-full px-4 py-2.5 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono bg-white text-indigo-950 font-bold"
+                                        required
+                                    />
+                                    <p className="text-[11px] text-indigo-600/80">
+                                        Job will execute automatically once every day at <span className="font-bold">{formData.customDailyTime}</span> ({formData.timezone}).
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                 <input
