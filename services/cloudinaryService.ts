@@ -107,3 +107,38 @@ export const deleteCloudinaryFolderImages = async (cloudName: string, apiKey: st
         throw error;
     }
 };
+
+export const deleteCloudinaryImages = async (
+    cloudName: string,
+    apiKey: string,
+    apiSecret: string,
+    publicIds: string[]
+) => {
+    cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true
+    });
+
+    try {
+        let totalDeleted = 0;
+        const chunkSize = 100;
+        for (let i = 0; i < publicIds.length; i += chunkSize) {
+            const chunk = publicIds.slice(i, i + chunkSize);
+            try {
+                const deleteRes: any = await cloudinary.api.delete_resources(chunk);
+                const deletedMap = deleteRes.deleted || {};
+                totalDeleted += Object.keys(deletedMap).length;
+            } catch (err) {
+                console.error('Error deleting chunk of images:', err);
+                throw err;
+            }
+        }
+        return totalDeleted;
+    } catch (error) {
+        console.error('Cloudinary Images Delete Error:', error);
+        throw error;
+    }
+};
+

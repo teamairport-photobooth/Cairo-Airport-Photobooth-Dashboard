@@ -16,6 +16,7 @@ import {
     Image as ImageIcon,
     Download,
     Info,
+    Trash2,
     Loader2,
     Calendar,
     ArrowUpDown,
@@ -38,6 +39,8 @@ export default function DashboardPage() {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
     const [inspectImage, setInspectImage] = useState<CloudinaryImage | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
@@ -244,6 +247,71 @@ export default function DashboardPage() {
         } catch (error) {
             console.error('Download failed:', error);
             window.open(url + (url.includes('?') ? '&' : '?') + 'fl_attachment', '_blank');
+        }
+    };
+
+    const handleDeleteImage = async (img: CloudinaryImage) => {
+        if (!project || deletingId) return;
+        if (!confirm('Are you sure you want to delete this image from Cloudinary? This action cannot be undone.')) return;
+
+        setDeletingId(img.public_id);
+        try {
+            const res = await fetch('/api/cloudinary/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    public_id: img.public_id,
+                    cloudName: project.cloudinaryCloudName,
+                    apiKey: project.cloudinaryApiKey,
+                    apiSecret: project.cloudinaryApiSecret
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                setImages(prev => prev.filter(i => i.public_id !== img.public_id));
+                setSelectedIds(prev => prev.filter(id => id !== img.public_id));
+            } else {
+                alert(data.error || 'Failed to delete image');
+            }
+        } catch (err) {
+            console.error('Error deleting image:', err);
+            alert('An error occurred while deleting image');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!project || selectedIds.length === 0 || isBulkDeleting) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected image(s) from Cloudinary? This action cannot be undone.`)) return;
+
+        setIsBulkDeleting(true);
+        try {
+            const res = await fetch('/api/cloudinary/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    public_ids: selectedIds,
+                    cloudName: project.cloudinaryCloudName,
+                    apiKey: project.cloudinaryApiKey,
+                    apiSecret: project.cloudinaryApiSecret
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                const deletedSet = new Set(selectedIds);
+                setImages(prev => prev.filter(i => !deletedSet.has(i.public_id)));
+                setSelectedIds([]);
+            } else {
+                alert(data.error || 'Failed to delete selected images');
+            }
+        } catch (err) {
+            console.error('Error deleting selected images:', err);
+            alert('An error occurred while deleting selected images');
+        } finally {
+            setIsBulkDeleting(false);
         }
     };
 
@@ -504,39 +572,6 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                         </div>
                     </div>
-
-                    {/* API Integration Card */}
-                    {user.role === UserRole.ADMIN && (
-                        <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
-                                        <Cpu size={24} />
-                                    </div>
-                                    <h3 className="text-xl font-bold">API Integration</h3>
-                                </div>
-                            </div>
-                            <p className="text-slate-400 mb-6 text-sm">
-                                Use the endpoint below to log live image generation events. Every request updates usage logs and increments total count.
-                            </p>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Endpoint URL</label>
-                                    <div className="flex items-center gap-2 bg-slate-800 p-3 rounded-xl border border-slate-700">
-                                        <code className="text-indigo-400 text-sm flex-1 truncate">
-                                            {origin}/api/projects/{project.id}/generate
-                                        </code>
-                                        <button
-                                            onClick={() => copyToClipboard(`${origin}/api/projects/${project.id}/generate`)}
-                                            className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400"
-                                        >
-                                            {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -591,14 +626,24 @@ export default function DashboardPage() {
                                 <span className="text-sm text-indigo-400">|</span>
                                 <span className="text-sm font-medium text-indigo-600">{selectedIds.length} images selected</span>
                             </div>
-                            <button
-                                onClick={handleBulkDownload}
-                                disabled={selectedIds.length === 0}
-                                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
-                            >
-                                <Download size={18} />
-                                Download Selected
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleBulkDownload}
+                                    disabled={selectedIds.length === 0}
+                                    className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
+                                >
+                                    <Download size={18} />
+                                    Download Selected
+                                </button>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    disabled={selectedIds.length === 0 || isBulkDeleting}
+                                    className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none"
+                                >
+                                    {isBulkDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                                    {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -669,6 +714,21 @@ export default function DashboardPage() {
                                                         title="View Details"
                                                     >
                                                         <Info size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteImage(img);
+                                                        }}
+                                                        disabled={deletingId === img.public_id}
+                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                                                        title="Delete Image"
+                                                    >
+                                                        {deletingId === img.public_id ? (
+                                                            <Loader2 size={14} className="animate-spin" />
+                                                        ) : (
+                                                            <Trash2 size={14} />
+                                                        )}
                                                     </button>
                                                 </div>
                                             </div>
