@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getGlobalSettingsServer } from '@/utils/supabase';
 
-const getCronApiKey = () => {
-    return process.env.CRON_JOBS_API_KEY || '';
+const getCronCredentials = async () => {
+    const settings = await getGlobalSettingsServer();
+    return {
+        apiKey: settings?.cron_jobs_api_key || '',
+        cronSecret: settings?.cron_secret || ''
+    };
 };
 
 export async function GET() {
-    const apiKey = getCronApiKey();
+    const { apiKey, cronSecret } = await getCronCredentials();
     if (!apiKey) {
-        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in environment variables.' }, { status: 400 });
+        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in global_settings.' }, { status: 400 });
     }
 
     try {
@@ -52,7 +57,7 @@ export async function GET() {
 
         return NextResponse.json({
             jobs: detailedJobs,
-            defaultCronSecret: process.env.CRON_SECRET || 'Airport$$26$$cron$$bulk$$delete'
+            defaultCronSecret: cronSecret
         });
     } catch (err: any) {
         console.error('Fetch Cron Jobs Error:', err);
@@ -61,9 +66,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-    const apiKey = getCronApiKey();
+    const { apiKey } = await getCronCredentials();
     if (!apiKey) {
-        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in environment variables.' }, { status: 400 });
+        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in global_settings.' }, { status: 400 });
     }
 
     try {

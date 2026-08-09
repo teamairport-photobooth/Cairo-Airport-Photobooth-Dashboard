@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getGlobalSettingsServer } from '@/utils/supabase';
 
-const getCronApiKey = () => {
-    return process.env.CRON_JOBS_API_KEY || '';
+const getCronApiKey = async () => {
+    const settings = await getGlobalSettingsServer();
+    return settings?.cron_jobs_api_key || '';
 };
 
 export async function GET(
@@ -9,9 +11,9 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const apiKey = getCronApiKey();
+    const apiKey = await getCronApiKey();
     if (!apiKey) {
-        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in environment variables.' }, { status: 400 });
+        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in global_settings.' }, { status: 400 });
     }
 
     try {
@@ -41,9 +43,9 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const apiKey = getCronApiKey();
+    const apiKey = await getCronApiKey();
     if (!apiKey) {
-        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in environment variables.' }, { status: 400 });
+        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in global_settings.' }, { status: 400 });
     }
 
     try {
@@ -74,9 +76,9 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const apiKey = getCronApiKey();
+    const apiKey = await getCronApiKey();
     if (!apiKey) {
-        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in environment variables.' }, { status: 400 });
+        return NextResponse.json({ error: 'CRON_JOBS_API_KEY is not configured in global_settings.' }, { status: 400 });
     }
 
     try {

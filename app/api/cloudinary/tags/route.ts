@@ -1,12 +1,6 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+import { getGlobalSettingsServer } from '@/utils/supabase';
 
 export async function POST(request: NextRequest) {
     try {
@@ -21,14 +15,9 @@ export async function POST(request: NextRequest) {
         let apiKey = reqApiKey;
         let apiSecret = reqApiSecret;
 
-        // If credentials not in body, try fetching from Supabase
+        // If credentials not in body, fetch from global_settings table
         if (!cloudName || !apiKey || !apiSecret) {
-            const { data: settings } = await supabase
-                .from('global_settings')
-                .select('*')
-                .eq('id', 'current')
-                .single();
-
+            const settings = await getGlobalSettingsServer();
             if (settings) {
                 cloudName = cloudName || settings.cloudinary_cloud_name;
                 apiKey = apiKey || settings.cloudinary_api_key;
@@ -37,7 +26,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!cloudName || !apiKey || !apiSecret) {
-            return NextResponse.json({ error: 'Missing Cloudinary configuration' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing Cloudinary configuration in global_settings' }, { status: 400 });
         }
 
         cloudinary.config({

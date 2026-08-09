@@ -40,11 +40,7 @@ export default function ProjectsPage() {
                 description: p.description || '',
                 totalUsage: p.total_usage || 0,
                 createdAt: p.created_at,
-                ownerId: p.created_by || '',
-                cloudinaryCloudName: p.cloudinary_cloud_name,
-                cloudinaryTag: p.cloudinary_tag,
-                cloudinaryApiKey: p.cloudinary_api_key,
-                cloudinaryApiSecret: p.cloudinary_api_secret
+                ownerId: p.created_by || ''
             }));
 
             setProjects(mappedProjects);
@@ -108,7 +104,7 @@ export default function ProjectsPage() {
                             <div>
                                 <div className="flex items-center justify-between mb-3">
                                     <span className="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
-                                        #{project.cloudinaryTag || 'cairo-airport-photobooth'}
+                                        Photobooth Instance
                                     </span>
                                     <ExternalLink size={18} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
                                 </div>

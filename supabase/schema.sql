@@ -25,10 +25,6 @@ CREATE TABLE IF NOT EXISTS public.projects (
     name TEXT NOT NULL,
     description TEXT,
     total_usage INT DEFAULT 0,
-    cloudinary_cloud_name TEXT,
-    cloudinary_api_key TEXT,
-    cloudinary_api_secret TEXT,
-    cloudinary_tag TEXT DEFAULT 'cairo-airport-photobooth',
     created_by UUID REFERENCES auth.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -47,6 +43,9 @@ CREATE TABLE IF NOT EXISTS public.global_settings (
     cloudinary_cloud_name TEXT,
     cloudinary_api_key TEXT,
     cloudinary_api_secret TEXT,
+    cloudinary_tag TEXT DEFAULT 'cairo-airport-photobooth',
+    cron_jobs_api_key TEXT,
+    cron_secret TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

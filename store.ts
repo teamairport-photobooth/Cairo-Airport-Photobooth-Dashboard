@@ -24,8 +24,7 @@ const INITIAL_PROJECTS: Project[] = [
     name: 'Cairo Airport AI Photobooth',
     description: 'Main AI Photobooth instance at Cairo International Airport',
     createdAt: new Date().toISOString(),
-    ownerId: 'system',
-    cloudinaryTag: 'cairo-airport-photobooth'
+    ownerId: 'system'
   }
 ];
 

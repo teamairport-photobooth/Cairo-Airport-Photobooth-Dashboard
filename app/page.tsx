@@ -79,35 +79,13 @@ export default function DashboardPage() {
             }
 
             if (p) {
-                let finalCloudName = p.cloudinary_cloud_name;
-                let finalApiKey = p.cloudinary_api_key;
-                let finalApiSecret = p.cloudinary_api_secret;
-
-                if (!finalCloudName) {
-                    const { data: globalSettings } = await supabase
-                        .from('global_settings')
-                        .select('*')
-                        .eq('id', 'current')
-                        .single();
-
-                    if (globalSettings) {
-                        finalCloudName = globalSettings.cloudinary_cloud_name;
-                        finalApiKey = globalSettings.cloudinary_api_key;
-                        finalApiSecret = globalSettings.cloudinary_api_secret;
-                    }
-                }
-
                 const mapped: Project = {
                     id: p.id,
                     name: p.name,
                     description: p.description || '',
                     totalUsage: p.total_usage || 0,
                     createdAt: p.created_at,
-                    ownerId: p.created_by || '',
-                    cloudinaryCloudName: finalCloudName,
-                    cloudinaryTag: p.cloudinary_tag || 'cairo-airport-photobooth',
-                    cloudinaryApiKey: finalApiKey,
-                    cloudinaryApiSecret: finalApiSecret
+                    ownerId: p.created_by || ''
                 };
 
                 setProject(mapped);
@@ -140,21 +118,19 @@ export default function DashboardPage() {
                     amount: l.amount
                 })));
 
-                if (mapped.cloudinaryTag) {
-                    fetchImages(mapped.cloudinaryTag, mapped, false);
-                }
+                fetchImages('', mapped, false);
             } else {
                 // Fallback project object
                 const fallback: Project = {
                     id: 'cairo-airport-photobooth',
                     name: 'Cairo Airport AI Photobooth',
                     description: 'Main AI Photobooth instance at Cairo International Airport',
-                    totalUsage: 0,
                     createdAt: new Date().toISOString(),
-                    ownerId: user?.id || 'system',
-                    cloudinaryTag: 'cairo-airport-photobooth'
+                    ownerId: '',
+                    totalUsage: 0
                 };
                 setProject(fallback);
+                fetchImages('', fallback, false);
             }
         } catch (err) {
             console.error('Error fetching project:', err);
@@ -164,11 +140,6 @@ export default function DashboardPage() {
     };
 
     const fetchImages = async (tag?: string, targetProj?: Project, isNext = false) => {
-        const p = targetProj || project;
-        const currentTag = tag || p?.cloudinaryTag;
-
-        if (!p || !currentTag) return;
-
         if (isNext) {
             setLoadingMore(true);
         } else {
@@ -179,12 +150,12 @@ export default function DashboardPage() {
 
         try {
             const queryParams = new URLSearchParams({
-                tag: currentTag,
-                sort: sortOrder,
-                cloudName: p.cloudinaryCloudName || '',
-                apiKey: p.cloudinaryApiKey || '',
-                apiSecret: p.cloudinaryApiSecret || ''
+                sort: sortOrder
             });
+
+            if (tag) {
+                queryParams.append('tag', tag);
+            }
 
             const activeCursor = isNext ? nextCursor : null;
             if (activeCursor) {
@@ -209,8 +180,6 @@ export default function DashboardPage() {
         }
     };
 
-
-
     const handleBulkDownload = async () => {
         if (selectedIds.length === 0) return;
 
@@ -225,7 +194,7 @@ export default function DashboardPage() {
             }).replace(/,/g, '').replace(/ /g, '_');
 
             const filename = `${project?.name.replace(/ /g, '_')}_${dateStr}.${img.format}`;
-            const downloadUrl = `https://res.cloudinary.com/${project?.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
+            const downloadUrl = `https://res.cloudinary.com/cairo-airport-photobooth/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
 
             triggerDownload(downloadUrl, filename);
             await new Promise(r => setTimeout(r, 400));
@@ -260,10 +229,7 @@ export default function DashboardPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    public_id: img.public_id,
-                    cloudName: project.cloudinaryCloudName,
-                    apiKey: project.cloudinaryApiKey,
-                    apiSecret: project.cloudinaryApiSecret
+                    public_id: img.public_id
                 })
             });
 
@@ -292,10 +258,7 @@ export default function DashboardPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    public_ids: selectedIds,
-                    cloudName: project.cloudinaryCloudName,
-                    apiKey: project.cloudinaryApiKey,
-                    apiSecret: project.cloudinaryApiSecret
+                    public_ids: selectedIds
                 })
             });
 
@@ -445,7 +408,7 @@ export default function DashboardPage() {
 
                     <div className="flex flex-col items-start md:items-end gap-3">
                         <p className="text-xs text-slate-400 font-mono">
-                            Tag: <span className="text-indigo-300 font-bold">#{project.cloudinaryTag}</span>
+                            Status: <span className="text-indigo-300 font-bold">Active Instance</span>
                         </p>
                     </div>
                 </div>
@@ -647,17 +610,7 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    {!project.cloudinaryTag ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-4">
-                                <Info size={32} />
-                            </div>
-                            <h4 className="text-lg font-bold text-slate-800">Cloudinary Not Configured</h4>
-                            <p className="text-slate-500 max-w-sm mt-2">
-                                Please set a Cloud Name and Tag in settings to fetch photos from your Cloudinary account.
-                            </p>
-                        </div>
-                    ) : loadingImages ? (
+                    {loadingImages ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
                                 <div key={n} className="aspect-square bg-slate-100 rounded-2xl animate-pulse" />
@@ -673,7 +626,7 @@ export default function DashboardPage() {
                                         className={`group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer ${selectedIds.includes(img.public_id) ? 'border-indigo-600 shadow-xl' : 'border-transparent hover:border-indigo-200'}`}
                                     >
                                         <img
-                                            src={`https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/w_400,c_fill,g_auto/v${img.version}/${img.public_id}.${img.format}`}
+                                            src={img.secure_url || img.url || ''}
                                             alt={img.public_id}
                                             className={`w-full h-full object-cover transition-transform duration-500 ${selectedIds.includes(img.public_id) ? 'scale-95 opacity-90' : 'group-hover:scale-110'}`}
                                         />
@@ -697,8 +650,8 @@ export default function DashboardPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const downloadUrl = `https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
-                                                            triggerDownload(downloadUrl, `${project.name}_${img.public_id}.${img.format}`);
+                                                            const downloadUrl = img.secure_url || img.url || '';
+                                                            triggerDownload(downloadUrl, `${project?.name}_${img.public_id}.${img.format}`);
                                                         }}
                                                         className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
                                                         title="Download Image"
@@ -763,7 +716,7 @@ export default function DashboardPage() {
                             </div>
                             <h4 className="text-lg font-bold text-slate-800">No Images Found</h4>
                             <p className="text-slate-500 max-w-sm mt-2">
-                                We couldn't find any images for tag <span className="font-bold">"{project.cloudinaryTag}"</span>. Make sure your photobooth is uploading assets to Cloudinary.
+                                We couldn't find any images in Cloudinary. Make sure your photobooth is uploading assets to Cloudinary.
                             </p>
                         </div>
                     )}
@@ -828,7 +781,7 @@ export default function DashboardPage() {
                         <div className="flex flex-col md:flex-row max-h-[85vh]">
                             <div className="w-full md:w-3/5 bg-slate-100 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 min-h-[300px] md:min-h-0">
                                 <img
-                                    src={`https://res.cloudinary.com/${project?.cloudinaryCloudName || 'placeholder'}/image/upload/v${inspectImage.version}/${inspectImage.public_id}.${inspectImage.format}`}
+                                    src={inspectImage.secure_url || inspectImage.url || ''}
                                     alt={inspectImage.public_id}
                                     className="w-full h-full object-contain max-h-[40vh] md:max-h-full"
                                 />

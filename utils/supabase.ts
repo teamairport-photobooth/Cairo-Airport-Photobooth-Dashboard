@@ -8,3 +8,23 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export async function getGlobalSettingsServer() {
+    try {
+        const { data, error } = await supabase
+            .from('global_settings')
+            .select('*')
+            .eq('id', 'current')
+            .single();
+
+        if (error) {
+            console.error('Error fetching global settings from database:', error);
+            return null;
+        }
+
+        return data;
+    } catch (err) {
+        console.error('Failed to query global settings:', err);
+        return null;
+    }
+}

@@ -75,7 +75,7 @@ export default function CronJobsPage() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [origin, setOrigin] = useState('');
     const [mounted, setMounted] = useState(false);
-    const [defaultSecret, setDefaultSecret] = useState('Airport$$26$$cron$$bulk$$delete');
+    const [defaultSecret, setDefaultSecret] = useState('');
 
     // Modals state
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -722,7 +722,7 @@ export default function CronJobsPage() {
                                         type="text"
                                         value={formData.secretHeader}
                                         onChange={e => setFormData({ ...formData, secretHeader: e.target.value })}
-                                        placeholder="Airport$$26$$cron$$bulk$$delete"
+                                        placeholder="CRON_SECRET string..."
                                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
                                     />
                                 </div>

@@ -110,43 +110,20 @@ export default function ProjectDetailPage() {
                 return;
             }
 
-            // Fallback for Cloudinary settings
-            let finalCloudName = p.cloudinary_cloud_name;
-            let finalApiKey = p.cloudinary_api_key;
-            let finalApiSecret = p.cloudinary_api_secret;
-
-            if (!finalCloudName) {
-                const { data: globalSettings } = await supabase
-                    .from('global_settings')
-                    .select('*')
-                    .eq('id', 'current')
-                    .single();
-
-                if (globalSettings) {
-                    finalCloudName = globalSettings.cloudinary_cloud_name;
-                    finalApiKey = globalSettings.cloudinary_api_key;
-                    finalApiSecret = globalSettings.cloudinary_api_secret;
-                }
-            }
-
             const mapped: Project = {
                 id: p.id,
                 name: p.name,
                 description: p.description || '',
                 totalUsage: p.total_usage || 0,
                 createdAt: p.created_at,
-                ownerId: p.created_by || '',
-                cloudinaryCloudName: finalCloudName,
-                cloudinaryTag: p.cloudinary_tag,
-                cloudinaryApiKey: finalApiKey,
-                cloudinaryApiSecret: finalApiSecret
+                ownerId: p.created_by || ''
             };
 
             setProject(mapped);
             setEditForm({
                 name: mapped.name,
                 description: mapped.description,
-                cloudinaryTag: mapped.cloudinaryTag || ''
+                cloudinaryTag: ''
             });
 
             // Fetch Usage Logs based on timeRange
@@ -159,7 +136,7 @@ export default function ProjectDetailPage() {
                 finalDate.setHours(23, 59, 59, 999);
             } else {
                 beginDate = new Date();
-                beginDate.setDate(beginDate.getDate() - timeRange);
+                beginDate.setDate(beginDate.getDate() - (timeRange as number));
             }
 
             const { data: logsData } = await supabase
@@ -177,10 +154,7 @@ export default function ProjectDetailPage() {
                 amount: l.amount
             })));
 
-            if (mapped.cloudinaryTag) {
-                fetchImages(mapped.cloudinaryTag, mapped, false);
-                fetchFeaturedImages(mapped, false);
-            }
+            fetchImages('', mapped, false);
 
             fetchMembers();
             if (user.role === UserRole.ADMIN) {
@@ -252,11 +226,6 @@ export default function ProjectDetailPage() {
     };
 
     const fetchImages = async (tag?: string, targetProj?: Project, isNext = false) => {
-        const p = targetProj || project;
-        const currentTag = tag || p?.cloudinaryTag;
-
-        if (!p || !currentTag) return;
-
         if (isNext) {
             setLoadingMore(true);
         } else {
@@ -267,12 +236,12 @@ export default function ProjectDetailPage() {
 
         try {
             const queryParams = new URLSearchParams({
-                tag: currentTag,
-                sort: sortOrder,
-                cloudName: p.cloudinaryCloudName || '',
-                apiKey: p.cloudinaryApiKey || '',
-                apiSecret: p.cloudinaryApiSecret || ''
+                sort: sortOrder
             });
+
+            if (tag) {
+                queryParams.append('tag', tag);
+            }
 
             const activeCursor = isNext ? nextCursor : null;
             if (activeCursor) {
@@ -299,7 +268,7 @@ export default function ProjectDetailPage() {
 
     const fetchFeaturedImages = async (targetProj?: Project, isNext = false) => {
         const p = targetProj || project;
-        if (!p || !p.cloudinaryTag) return;
+        if (!p) return;
 
         if (isNext) {
             setLoadingMoreFeatured(true);
@@ -311,11 +280,8 @@ export default function ProjectDetailPage() {
 
         try {
             const queryParams = new URLSearchParams({
-                tag: `${p.cloudinaryTag},Featured`,
-                sort: sortOrder,
-                cloudName: p.cloudinaryCloudName || '',
-                apiKey: p.cloudinaryApiKey || '',
-                apiSecret: p.cloudinaryApiSecret || ''
+                tag: 'Featured',
+                sort: sortOrder
             });
 
             const activeCursor = isNext ? featuredCursor : null;
@@ -380,10 +346,7 @@ export default function ProjectDetailPage() {
                 body: JSON.stringify({
                     public_id: img.public_id,
                     tag,
-                    action,
-                    cloudName: project.cloudinaryCloudName,
-                    apiKey: project.cloudinaryApiKey,
-                    apiSecret: project.cloudinaryApiSecret
+                    action
                 })
             });
 
@@ -483,7 +446,7 @@ export default function ProjectDetailPage() {
             }).replace(/,/g, '').replace(/ /g, '_');
 
             const filename = `${project?.name.replace(/ /g, '_')}_${dateStr}.${img.format}`;
-            const downloadUrl = `https://res.cloudinary.com/${project?.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
+            const downloadUrl = img.secure_url || img.url || '';
             
             triggerDownload(downloadUrl, filename);
             await new Promise(r => setTimeout(r, 400));
@@ -518,10 +481,7 @@ export default function ProjectDetailPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    public_id: img.public_id,
-                    cloudName: project.cloudinaryCloudName,
-                    apiKey: project.cloudinaryApiKey,
-                    apiSecret: project.cloudinaryApiSecret
+                    public_id: img.public_id
                 })
             });
 
@@ -551,10 +511,7 @@ export default function ProjectDetailPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    public_ids: selectedIds,
-                    cloudName: project.cloudinaryCloudName,
-                    apiKey: project.cloudinaryApiKey,
-                    apiSecret: project.cloudinaryApiSecret
+                    public_ids: selectedIds
                 })
             });
 
@@ -699,7 +656,7 @@ export default function ProjectDetailPage() {
                         <div>
                             <h2 className="text-2xl font-bold text-slate-800">{project.name}</h2>
                             <p className="text-slate-500 text-sm flex items-center gap-2">
-                                ID: {project.id} • <span className="text-indigo-600 font-medium">#{project.cloudinaryTag || 'No Tag'}</span>
+                                ID: {project.id} • <span className="text-indigo-600 font-medium">Photobooth Instance</span>
                             </p>
                         </div>
                     </div>
@@ -831,13 +788,18 @@ export default function ProjectDetailPage() {
                                     </button>
                                 </div>
                                 <div className="space-y-4">
-                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Cloudinary Cloud</p>
-                                        <p className="font-medium text-slate-700">{project.cloudinaryCloudName || 'Managed via Global Settings'}</p>
-                                    </div>
-                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Tag / Folder Path</p>
-                                        <p className="font-medium text-slate-700">{project.cloudinaryTag || 'Not set'}</p>
+                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Global System Settings</p>
+                                            <p className="text-xs font-medium text-slate-700">Cloudinary & System Config</p>
+                                        </div>
+                                        <button
+                                            onClick={() => router.push('/settings')}
+                                            className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                        >
+                                            Settings
+                                            <ExternalLink size={12} />
+                                        </button>
                                     </div>
                                     <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-center justify-between">
                                         <div>
@@ -944,17 +906,7 @@ export default function ProjectDetailPage() {
                             </div>
                         )}
 
-                        {!project.cloudinaryTag ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-4">
-                                    <Info size={32} />
-                                </div>
-                                <h4 className="text-lg font-bold text-slate-800">Cloudinary Not Configured</h4>
-                                <p className="text-slate-500 max-w-sm mt-2">
-                                    Please set a Cloud Name and Tag in the project settings to fetch photos from your Cloudinary account.
-                                </p>
-                            </div>
-                        ) : loadingImages ? (
+                        {loadingImages ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
                                     <div key={n} className="aspect-square bg-slate-100 rounded-2xl animate-pulse" />
@@ -970,7 +922,7 @@ export default function ProjectDetailPage() {
                                             className={`group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer ${selectedIds.includes(img.public_id) ? 'border-indigo-600 shadow-xl' : 'border-transparent hover:border-indigo-200'}`}
                                         >
                                             <img
-                                                src={`https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/w_400,c_fill,g_auto/v${img.version}/${img.public_id}.${img.format}`}
+                                                src={img.secure_url || img.url || ''}
                                                 alt={img.public_id}
                                                 className={`w-full h-full object-cover transition-transform duration-500 ${selectedIds.includes(img.public_id) ? 'scale-95 opacity-90' : 'group-hover:scale-110'}`}
                                             />
@@ -1011,8 +963,8 @@ export default function ProjectDetailPage() {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                const downloadUrl = `https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
-                                                                triggerDownload(downloadUrl, `${project.name}_${img.public_id}.${img.format}`);
+                                                                const downloadUrl = img.secure_url || img.url || '';
+                                                                triggerDownload(downloadUrl, `${project?.name}_${img.public_id}.${img.format}`);
                                                             }}
                                                             className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
                                                             title="Download Image"
@@ -1077,7 +1029,7 @@ export default function ProjectDetailPage() {
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-800">No Images Found</h4>
                                 <p className="text-slate-500 max-w-sm mt-2">
-                                    We couldn't find any images for tag <span className="font-bold">"{project.cloudinaryTag}"</span>. Make sure your photobooth is uploading assets to Cloudinary.
+                                    We couldn't find any images in Cloudinary. Make sure your photobooth is uploading assets to Cloudinary.
                                 </p>
                             </div>
                         )}
@@ -1121,14 +1073,7 @@ export default function ProjectDetailPage() {
                             </div>
                         </div>
 
-                        {!project.cloudinaryTag ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-4">
-                                    <Info size={32} />
-                                </div>
-                                <h4 className="text-lg font-bold text-slate-800">Cloudinary Not Configured</h4>
-                            </div>
-                        ) : loadingFeatured ? (
+                        {loadingFeatured ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
                                     <div key={n} className="aspect-square bg-slate-100 rounded-2xl animate-pulse" />
@@ -1144,7 +1089,7 @@ export default function ProjectDetailPage() {
                                             className={`group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer ${selectedIds.includes(img.public_id) ? 'border-indigo-600 shadow-xl' : 'border-transparent hover:border-indigo-200'}`}
                                         >
                                             <img
-                                                src={`https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/w_400,c_fill,g_auto/v${img.version}/${img.public_id}.${img.format}`}
+                                                src={img.secure_url || img.url || ''}
                                                 alt={img.public_id}
                                                 className={`w-full h-full object-cover transition-transform duration-500 ${selectedIds.includes(img.public_id) ? 'scale-95 opacity-90' : 'group-hover:scale-110'}`}
                                             />
@@ -1171,7 +1116,7 @@ export default function ProjectDetailPage() {
                                                                 handleToggleTag(img);
                                                             }}
                                                             disabled={taggingId === img.public_id}
-                                                            className="p-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                                                            className="p-1.5 bg-amber-500/80 backdrop-blur-md rounded-lg text-white hover:bg-amber-600 transition-colors disabled:opacity-50"
                                                             title="Remove from Featured"
                                                         >
                                                             {taggingId === img.public_id ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} fill="currentColor" />}
@@ -1179,8 +1124,8 @@ export default function ProjectDetailPage() {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                const downloadUrl = `https://res.cloudinary.com/${project.cloudinaryCloudName || 'placeholder'}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
-                                                                triggerDownload(downloadUrl, `${project.name}_${img.public_id}.${img.format}`);
+                                                                const downloadUrl = img.secure_url || img.url || '';
+                                                                triggerDownload(downloadUrl, `${project?.name}_${img.public_id}.${img.format}`);
                                                             }}
                                                             className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
                                                             title="Download Image"
@@ -1348,7 +1293,7 @@ export default function ProjectDetailPage() {
                         <div className="flex flex-col md:flex-row max-h-[85vh]">
                             <div className="w-full md:w-3/5 bg-slate-100 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 min-h-[300px] md:min-h-0">
                                 <img
-                                    src={`https://res.cloudinary.com/${project?.cloudinaryCloudName || 'placeholder'}/image/upload/v${inspectImage.version}/${inspectImage.public_id}.${inspectImage.format}`}
+                                    src={inspectImage.secure_url || inspectImage.url || ''}
                                     alt={inspectImage.public_id}
                                     className="w-full h-full object-contain max-h-[40vh] md:max-h-full"
                                 />

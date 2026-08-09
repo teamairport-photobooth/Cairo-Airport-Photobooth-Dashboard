@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabase';
+import { supabase, getGlobalSettingsServer } from '@/utils/supabase';
 import { deleteCloudinaryFolderImages } from '@/services/cloudinaryService';
 
 export async function handleCleanup(req: NextRequest) {
     try {
-        const cronSecret = process.env.CRON_SECRET ? process.env.CRON_SECRET.trim() : null;
+        const globalSettings = await getGlobalSettingsServer();
+        const cronSecret = globalSettings?.cron_secret ? globalSettings.cron_secret.trim() : null;
 
         // 1. Authorization Guard
         const authHeader = req.headers.get('authorization')?.trim();
@@ -47,30 +48,15 @@ export async function handleCleanup(req: NextRequest) {
             );
         }
 
-        // 2. Fetch Credentials & Folder Tag from Supabase
-        const { data: globalSettings, error: gError } = await supabase
-            .from('global_settings')
-            .select('*')
-            .eq('id', 'current')
-            .single();
-
-        if (gError && gError.code !== 'PGRST116') throw gError;
-
-        const { data: projectsData, error: pError } = await supabase
-            .from('projects')
-            .select('*')
-            .limit(1);
-
-        if (pError) throw pError;
-
-        const cloudName = globalSettings?.cloudinary_cloud_name || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-        const apiKey = globalSettings?.cloudinary_api_key || process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-        const apiSecret = globalSettings?.cloudinary_api_secret || process.env.CLOUDINARY_API_SECRET;
-        const folderName = (projectsData && projectsData.length > 0 && projectsData[0].cloudinary_tag) || 'cairo-airport-photobooth';
+        // 2. Fetch Credentials & Folder Tag from global_settings
+        const cloudName = globalSettings?.cloudinary_cloud_name;
+        const apiKey = globalSettings?.cloudinary_api_key;
+        const apiSecret = globalSettings?.cloudinary_api_secret;
+        const folderName = globalSettings?.cloudinary_tag || 'cairo-airport-photobooth';
 
         if (!cloudName || !apiKey || !apiSecret) {
             return NextResponse.json(
-                { error: 'Cloudinary API credentials are not configured in settings.' },
+                { error: 'Cloudinary API credentials are not configured in global_settings.' },
                 { status: 400 }
             );
         }

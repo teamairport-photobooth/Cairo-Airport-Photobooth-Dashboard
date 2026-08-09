@@ -22,16 +22,6 @@ export interface Project {
   // Stats
   totalUsage?: number;
   total_usage?: number; // Supabase map
-  // Cloudinary
-  cloudinaryCloudName?: string;
-  cloudinaryTag?: string;
-  cloudinaryApiKey?: string;
-  cloudinaryApiSecret?: string;
-  // Supabase Snake Case Mappings
-  cloudinary_cloud_name?: string;
-  cloudinary_api_key?: string;
-  cloudinary_api_secret?: string;
-  cloudinary_tag?: string;
   created_at?: string;
   created_by?: string;
 }
@@ -56,6 +46,8 @@ export interface CloudinaryImage {
   height: number;
   type: string;
   created_at: string;
+  secure_url?: string;
+  url?: string;
   context?: {
     [key: string]: string;
   };
@@ -64,8 +56,13 @@ export interface CloudinaryImage {
   };
   tags?: string[];
 }
+
 export interface GlobalSettings {
   cloudinaryCloudName: string;
   cloudinaryApiKey: string;
   cloudinaryApiSecret: string;
+  cloudinaryTag: string;
+  cronJobsApiKey?: string;
+  cronSecret?: string;
 }
+

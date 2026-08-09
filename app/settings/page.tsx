@@ -14,7 +14,9 @@ import {
     AlertCircle,
     FolderKanban,
     Trash2,
-    Check
+    Check,
+    Clock,
+    Lock
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -24,14 +26,16 @@ export default function SettingsPage() {
     const [projectId, setProjectId] = useState<string | null>(null);
     const [projectForm, setProjectForm] = useState({
         name: '',
-        description: '',
-        cloudinaryTag: ''
+        description: ''
     });
 
     const [globalForm, setGlobalForm] = useState({
         cloudinaryCloudName: '',
         cloudinaryApiKey: '',
-        cloudinaryApiSecret: ''
+        cloudinaryApiSecret: '',
+        cloudinaryTag: 'cairo-airport-photobooth',
+        cronJobsApiKey: '',
+        cronSecret: ''
     });
 
     const [isLoading, setIsLoading] = useState(true);
@@ -69,7 +73,10 @@ export default function SettingsPage() {
                 setGlobalForm({
                     cloudinaryCloudName: globalData.cloudinary_cloud_name || '',
                     cloudinaryApiKey: globalData.cloudinary_api_key || '',
-                    cloudinaryApiSecret: globalData.cloudinary_api_secret || ''
+                    cloudinaryApiSecret: globalData.cloudinary_api_secret || '',
+                    cloudinaryTag: globalData.cloudinary_tag || 'cairo-airport-photobooth',
+                    cronJobsApiKey: globalData.cron_jobs_api_key || '',
+                    cronSecret: globalData.cron_secret || ''
                 });
             }
 
@@ -86,8 +93,7 @@ export default function SettingsPage() {
                 setProjectId(p.id);
                 setProjectForm({
                     name: p.name || 'Cairo Airport AI Photobooth',
-                    description: p.description || '',
-                    cloudinaryTag: p.cloudinary_tag || 'cairo-airport-photobooth'
+                    description: p.description || ''
                 });
             }
         } catch (err) {
@@ -114,6 +120,9 @@ export default function SettingsPage() {
                     cloudinary_cloud_name: globalForm.cloudinaryCloudName.trim(),
                     cloudinary_api_key: globalForm.cloudinaryApiKey.trim(),
                     cloudinary_api_secret: globalForm.cloudinaryApiSecret.trim(),
+                    cloudinary_tag: globalForm.cloudinaryTag.trim(),
+                    cron_jobs_api_key: globalForm.cronJobsApiKey.trim(),
+                    cron_secret: globalForm.cronSecret.trim(),
                     updated_at: new Date().toISOString()
                 });
 
@@ -125,11 +134,7 @@ export default function SettingsPage() {
                     .from('projects')
                     .update({
                         name: projectForm.name.trim(),
-                        description: projectForm.description.trim(),
-                        cloudinary_tag: projectForm.cloudinaryTag.trim(),
-                        cloudinary_cloud_name: globalForm.cloudinaryCloudName.trim(),
-                        cloudinary_api_key: globalForm.cloudinaryApiKey.trim(),
-                        cloudinary_api_secret: globalForm.cloudinaryApiSecret.trim()
+                        description: projectForm.description.trim()
                     })
                     .eq('id', projectId);
 
@@ -150,7 +155,7 @@ export default function SettingsPage() {
         if (isPurging) return;
 
         const confirmPurge = window.confirm(
-            `Are you sure you want to delete ALL photobooth images in folder "${projectForm.cloudinaryTag}" from Cloudinary storage?`
+            `Are you sure you want to delete ALL photobooth images in folder "${globalForm.cloudinaryTag}" from Cloudinary storage?`
         );
         if (!confirmPurge) return;
 
@@ -198,7 +203,7 @@ export default function SettingsPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Settings</h2>
-                    <p className="text-slate-500 text-sm mt-1">Manage photobooth details, tags, Cloudinary credentials, and daily cleanup tasks.</p>
+                    <p className="text-slate-500 text-sm mt-1">Manage global system configurations, Cloudinary credentials, and Cron Scheduler settings.</p>
                 </div>
                 <button
                     onClick={fetchSettings}
@@ -232,37 +237,23 @@ export default function SettingsPage() {
                                         <FolderKanban size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800">Photobooth Details & Asset Tag</h3>
-                                        <p className="text-xs text-slate-500">Configure display name, description, and asset tag.</p>
+                                        <h3 className="font-bold text-slate-800">Photobooth Instance Details</h3>
+                                        <p className="text-xs text-slate-500">Configure display name and description.</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-8 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">Photobooth Name</label>
-                                        <input
-                                            type="text"
-                                            value={projectForm.name}
-                                            onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                            placeholder="e.g. Cairo Airport AI Photobooth"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">Cloudinary Asset Tag / Folder</label>
-                                        <input
-                                            type="text"
-                                            value={projectForm.cloudinaryTag}
-                                            onChange={e => setProjectForm({ ...projectForm, cloudinaryTag: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
-                                            placeholder="e.g. cairo-airport-photobooth"
-                                            required
-                                        />
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Photobooth Name</label>
+                                    <input
+                                        type="text"
+                                        value={projectForm.name}
+                                        onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        placeholder="e.g. Cairo Airport AI Photobooth"
+                                        required
+                                    />
                                 </div>
 
                                 <div>
@@ -278,7 +269,7 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* Section 2: Cloudinary Credentials */}
+                        {/* Section 2: Cloudinary Global Credentials */}
                         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                             <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -286,13 +277,9 @@ export default function SettingsPage() {
                                         <Cloud size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800">Cloudinary Credentials</h3>
-                                        <p className="text-xs text-slate-500">API credentials for fetching photobooth images.</p>
+                                        <h3 className="font-bold text-slate-800">Cloudinary Integration</h3>
+                                        <p className="text-xs text-slate-500">Global Cloudinary credentials and asset tag folder.</p>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                                    <ShieldCheck size={12} />
-                                    Encrypted Storage
                                 </div>
                             </div>
 
@@ -311,6 +298,20 @@ export default function SettingsPage() {
                                     </div>
 
                                     <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Asset Tag / Folder</label>
+                                        <input
+                                            type="text"
+                                            value={globalForm.cloudinaryTag}
+                                            onChange={e => setGlobalForm({ ...globalForm, cloudinaryTag: e.target.value })}
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                            placeholder="e.g. cairo-airport-photobooth"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
                                         <label className="block text-sm font-bold text-slate-700 mb-2">API Key</label>
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -326,21 +327,70 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                     </div>
-                                </div>
 
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">API Secret</label>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                                <ShieldCheck size={18} />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={globalForm.cloudinaryApiSecret}
+                                                onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiSecret: e.target.value })}
+                                                className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                                placeholder="••••••••••••••••"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 3: Cron Jobs Credentials */}
+                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                            <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
+                                        <Clock size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">Cron Scheduler Credentials</h3>
+                                        <p className="text-xs text-slate-500">API token for cron-job.org and cleanup authorization secret.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">API Secret</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cron-Job.org REST API Key</label>
                                     <div className="relative">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                            <ShieldCheck size={18} />
+                                            <Key size={18} />
                                         </div>
                                         <input
                                             type="password"
-                                            value={globalForm.cloudinaryApiSecret}
-                                            onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiSecret: e.target.value })}
+                                            value={globalForm.cronJobsApiKey}
+                                            onChange={e => setGlobalForm({ ...globalForm, cronJobsApiKey: e.target.value })}
                                             className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
-                                            placeholder="••••••••••••••••"
-                                            required
+                                            placeholder="Bearer API Key from cron-job.org console..."
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cron Cleanup Authorization Secret (CRON_SECRET)</label>
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                            <Lock size={18} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={globalForm.cronSecret}
+                                            onChange={e => setGlobalForm({ ...globalForm, cronSecret: e.target.value })}
+                                            className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                            placeholder="Secret phrase for cleanup verification..."
                                         />
                                     </div>
                                 </div>
@@ -363,13 +413,13 @@ export default function SettingsPage() {
                                     `}
                                 >
                                     {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                                    {isSaving ? 'Saving...' : 'Save Settings'}
+                                    {isSaving ? 'Saving...' : 'Save All Settings'}
                                 </button>
                             </div>
                         </div>
                     </form>
 
-                    {/* Section 3: Storage Maintenance */}
+                    {/* Section 4: Storage Maintenance */}
                     <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                         <div className="bg-slate-900 text-white px-8 py-6 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -378,7 +428,7 @@ export default function SettingsPage() {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-white text-lg">Storage Maintenance</h3>
-                                    <p className="text-xs text-slate-400">Purge images stored in Cloudinary folder "{projectForm.cloudinaryTag}".</p>
+                                    <p className="text-xs text-slate-400">Purge images stored in Cloudinary folder "{globalForm.cloudinaryTag}".</p>
                                 </div>
                             </div>
 
