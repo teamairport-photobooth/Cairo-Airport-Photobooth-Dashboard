@@ -21,7 +21,9 @@ import {
     Copy,
     ExternalLink,
     ShieldCheck,
-    Power
+    Power,
+    Key,
+    Lock
 } from 'lucide-react';
 
 interface CronJobSchedule {
@@ -32,6 +34,11 @@ interface CronJobSchedule {
     minutes: number[];
     months: number[];
     wdays: number[];
+}
+
+interface JobExtendedData {
+    headers?: Record<string, string>;
+    body?: string;
 }
 
 interface CronJob {
@@ -46,6 +53,7 @@ interface CronJob {
     nextExecution?: number;
     schedule: CronJobSchedule;
     requestMethod?: number;
+    extendedData?: JobExtendedData;
 }
 
 interface HistoryItem {
@@ -67,6 +75,7 @@ export default function CronJobsPage() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [origin, setOrigin] = useState('');
     const [mounted, setMounted] = useState(false);
+    const [defaultSecret, setDefaultSecret] = useState('Airport$$26$$cron$$bulk$$delete');
 
     // Modals state
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -80,6 +89,7 @@ export default function CronJobsPage() {
     const [formData, setFormData] = useState({
         title: '',
         url: '',
+        secretHeader: '',
         enabled: true,
         timezone: 'Africa/Cairo',
         frequencyPreset: 'daily_midnight', // daily_midnight, every_12h, every_hour, every_15m
@@ -107,6 +117,9 @@ export default function CronJobsPage() {
             const data = await res.json();
             if (res.ok) {
                 setJobs(data.jobs || []);
+                if (data.defaultCronSecret) {
+                    setDefaultSecret(data.defaultCronSecret);
+                }
             } else {
                 setErrorMsg(data.error || 'Failed to connect to cron-job.org');
             }
@@ -187,11 +200,11 @@ export default function CronJobsPage() {
     };
 
     const openCreateModal = () => {
-        const cleanupKey = 'Airport$$26$$cron$$bulk$$delete';
-        const defaultUrl = origin ? `${origin}/api/cron/cleanup-cloudinary?key=${cleanupKey}` : '';
+        const defaultUrl = origin ? `${origin}/api/cron/cleanup-cloudinary?key=${defaultSecret}` : '';
         setFormData({
             title: 'Cloudinary Bulk Storage Cleanup',
             url: defaultUrl,
+            secretHeader: defaultSecret,
             enabled: true,
             timezone: 'Africa/Cairo',
             frequencyPreset: 'daily_midnight'
@@ -212,9 +225,18 @@ export default function CronJobsPage() {
             preset = 'every_15m';
         }
 
+        // Extract secret header if present
+        const headers = job.extendedData?.headers || {};
+        const rawAuth = headers['Authorization'] || headers['authorization'] || '';
+        let extractedSecret = rawAuth;
+        if (rawAuth.startsWith('Bearer ')) {
+            extractedSecret = rawAuth.replace('Bearer ', '').trim();
+        }
+
         setFormData({
             title: job.title,
             url: job.url,
+            secretHeader: extractedSecret || defaultSecret,
             enabled: job.enabled,
             timezone: schedule.timezone || 'Africa/Cairo',
             frequencyPreset: preset
@@ -259,13 +281,30 @@ export default function CronJobsPage() {
         setIsSaving(true);
 
         const schedule = getSchedulePayload(formData.frequencyPreset, formData.timezone);
+        
+        // Build extendedData with Authorization header
+        const formattedSecret = formData.secretHeader.trim();
+        let extendedData: JobExtendedData | undefined = undefined;
+
+        if (formattedSecret) {
+            const authHeaderValue = formattedSecret.startsWith('Bearer ')
+                ? formattedSecret
+                : `Bearer ${formattedSecret}`;
+            extendedData = {
+                headers: {
+                    Authorization: authHeaderValue
+                }
+            };
+        }
+
         const payload = {
             job: {
                 title: formData.title,
                 url: formData.url,
                 enabled: formData.enabled,
                 saveResponses: true,
-                schedule
+                schedule,
+                ...(extendedData ? { extendedData } : {})
             }
         };
 
@@ -325,6 +364,11 @@ export default function CronJobsPage() {
             return `Every 15 Minutes • ${tz}`;
         }
         return `Custom Schedule • ${tz}`;
+    };
+
+    const getAuthHeaderValue = (job: CronJob) => {
+        const headers = job.extendedData?.headers || {};
+        return headers['Authorization'] || headers['authorization'] || null;
     };
 
     const renderStatusBadge = (status?: number) => {
@@ -445,126 +489,155 @@ export default function CronJobsPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-6">
-                    {jobs.map(job => (
-                        <div
-                            key={job.jobId}
-                            className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all space-y-6"
-                        >
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-3">
-                                        <h3 className="text-xl font-bold text-slate-800">{job.title}</h3>
-                                        {renderStatusBadge(job.lastStatus)}
+                    {jobs.map(job => {
+                        const authHeader = getAuthHeaderValue(job);
+                        return (
+                            <div
+                                key={job.jobId}
+                                className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all space-y-6"
+                            >
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-xl font-bold text-slate-800">{job.title}</h3>
+                                            {renderStatusBadge(job.lastStatus)}
+                                        </div>
+                                        <p className="text-xs text-slate-400 font-mono flex items-center gap-1.5 pt-1">
+                                            <span>Job ID: {job.jobId}</span>
+                                            <span>•</span>
+                                            <span>{formatSchedule(job.schedule)}</span>
+                                        </p>
                                     </div>
-                                    <p className="text-xs text-slate-400 font-mono flex items-center gap-1.5 pt-1">
-                                        <span>Job ID: {job.jobId}</span>
-                                        <span>•</span>
-                                        <span>{formatSchedule(job.schedule)}</span>
-                                    </p>
+
+                                    {/* Active Switch & Primary Controls */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                                                {job.enabled ? 'Active' : 'Disabled'}
+                                            </span>
+                                            <button
+                                                onClick={() => handleToggleEnable(job)}
+                                                disabled={actionLoadingId === job.jobId}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                                    job.enabled ? 'bg-indigo-600' : 'bg-slate-300'
+                                                }`}
+                                            >
+                                                <span
+                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                        job.enabled ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                                />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Active Switch & Primary Controls */}
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                                        <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                                            {job.enabled ? 'Active' : 'Disabled'}
-                                        </span>
+                                {/* Target URL code box & Auth Header */}
+                                <div className="space-y-2">
+                                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-center gap-3">
+                                        <span className="text-xs font-bold text-slate-400 uppercase">Target:</span>
+                                        <code className="text-indigo-600 text-xs font-mono flex-1 truncate">
+                                            {job.url}
+                                        </code>
                                         <button
-                                            onClick={() => handleToggleEnable(job)}
-                                            disabled={actionLoadingId === job.jobId}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                                job.enabled ? 'bg-indigo-600' : 'bg-slate-300'
-                                            }`}
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(job.url);
+                                                alert('Target URL copied to clipboard');
+                                            }}
+                                            className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
+                                            title="Copy Target URL"
                                         >
-                                            <span
-                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                                    job.enabled ? 'translate-x-6' : 'translate-x-1'
-                                                }`}
-                                            />
+                                            <Copy size={16} />
                                         </button>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* Target URL code box */}
-                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-center gap-3">
-                                <code className="text-indigo-600 text-xs font-mono flex-1 truncate">
-                                    {job.url}
-                                </code>
-                                <button
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(job.url);
-                                        alert('Target URL copied to clipboard');
-                                    }}
-                                    className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
-                                    title="Copy Target URL"
-                                >
-                                    <Copy size={16} />
-                                </button>
-                            </div>
+                                    {/* Auth Header Box */}
+                                    <div className="bg-indigo-50/60 p-3.5 rounded-2xl border border-indigo-100 flex items-center justify-between text-xs">
+                                        <div className="flex items-center gap-2 text-indigo-900 font-mono truncate">
+                                            <Lock size={14} className="text-indigo-600 shrink-0" />
+                                            <span className="font-bold text-indigo-700">Authorization Header:</span>
+                                            <code className="bg-white/80 px-2 py-0.5 rounded border border-indigo-200 text-indigo-700 truncate">
+                                                {authHeader || 'None attached'}
+                                            </code>
+                                        </div>
+                                        {authHeader && (
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(authHeader);
+                                                    alert('Authorization header copied to clipboard');
+                                                }}
+                                                className="p-1.5 hover:bg-indigo-100 rounded-lg text-indigo-600 transition-colors shrink-0"
+                                                title="Copy Secret Header"
+                                            >
+                                                <Copy size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
 
-                            {/* Info Stats Row */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Next Planned Run</p>
-                                    <p className="text-xs font-semibold text-slate-700 mt-1">
-                                        {job.nextExecution && job.nextExecution > 0
-                                            ? new Date(job.nextExecution * 1000).toLocaleString()
-                                            : 'Not scheduled'}
-                                    </p>
+                                {/* Info Stats Row */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Next Planned Run</p>
+                                        <p className="text-xs font-semibold text-slate-700 mt-1">
+                                            {job.nextExecution && job.nextExecution > 0
+                                                ? new Date(job.nextExecution * 1000).toLocaleString()
+                                                : 'Not scheduled'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last Execution</p>
+                                        <p className="text-xs font-semibold text-slate-700 mt-1">
+                                            {job.lastExecution && job.lastExecution > 0
+                                                ? new Date(job.lastExecution * 1000).toLocaleString()
+                                                : 'Never run'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last Run Duration</p>
+                                        <p className="text-xs font-semibold text-slate-700 mt-1">
+                                            {job.lastDuration ? `${(job.lastDuration / 1000).toFixed(2)}s` : 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Save Responses</p>
+                                        <p className="text-xs font-semibold text-slate-700 mt-1">
+                                            {job.saveResponses !== false ? 'Enabled (Logs Saved)' : 'Disabled'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last Execution</p>
-                                    <p className="text-xs font-semibold text-slate-700 mt-1">
-                                        {job.lastExecution && job.lastExecution > 0
-                                            ? new Date(job.lastExecution * 1000).toLocaleString()
-                                            : 'Never run'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last Run Duration</p>
-                                    <p className="text-xs font-semibold text-slate-700 mt-1">
-                                        {job.lastDuration ? `${(job.lastDuration / 1000).toFixed(2)}s` : 'N/A'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Save Responses</p>
-                                    <p className="text-xs font-semibold text-slate-700 mt-1">
-                                        {job.saveResponses !== false ? 'Enabled (Logs Saved)' : 'Disabled'}
-                                    </p>
-                                </div>
-                            </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100">
-                                <div className="flex items-center gap-2">
+                                {/* Action Buttons */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => openEditModal(job)}
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                                        >
+                                            <Edit3 size={14} />
+                                            Edit Job & Secret
+                                        </button>
+                                        <button
+                                            onClick={() => fetchJobHistory(job)}
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-all"
+                                        >
+                                            <History size={14} />
+                                            View History Logs
+                                        </button>
+                                    </div>
+
                                     <button
-                                        onClick={() => openEditModal(job)}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                                        onClick={() => handleDeleteJob(job.jobId)}
+                                        disabled={actionLoadingId === job.jobId}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
                                     >
-                                        <Edit3 size={14} />
-                                        Edit Job Config
-                                    </button>
-                                    <button
-                                        onClick={() => fetchJobHistory(job)}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-all"
-                                    >
-                                        <History size={14} />
-                                        View History Logs
+                                        {actionLoadingId === job.jobId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                        Delete Job
                                     </button>
                                 </div>
-
-                                <button
-                                    onClick={() => handleDeleteJob(job.jobId)}
-                                    disabled={actionLoadingId === job.jobId}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                                >
-                                    {actionLoadingId === job.jobId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                    Delete Job
-                                </button>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -580,7 +653,7 @@ export default function CronJobsPage() {
                     >
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-slate-800">
-                                {editingJob ? 'Edit Scheduled Job' : 'Create New Cron Job'}
+                                {editingJob ? 'Edit Scheduled Job & Secret' : 'Create New Cron Job'}
                             </h2>
                             <button
                                 onClick={() => { setShowCreateModal(false); setEditingJob(null); }}
@@ -609,15 +682,14 @@ export default function CronJobsPage() {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const cleanupKey = 'Airport$$26$$cron$$bulk$$delete';
                                             setFormData(prev => ({
                                                 ...prev,
-                                                url: `${origin}/api/cron/cleanup-cloudinary?key=${cleanupKey}`
+                                                url: `${origin}/api/cron/cleanup-cloudinary?key=${defaultSecret}`
                                             }));
                                         }}
                                         className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-1"
                                     >
-                                        Pre-fill Cleanup URL
+                                        Pre-fill Cleanup Endpoint
                                     </button>
                                 </div>
                                 <input
@@ -628,6 +700,35 @@ export default function CronJobsPage() {
                                     placeholder="https://your-domain.com/api/cron/cleanup-cloudinary?key=..."
                                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
                                 />
+                            </div>
+
+                            {/* Authorization Header / Secret Input */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                                        <Lock size={12} className="text-indigo-600" />
+                                        Authorization Header Secret (CRON_SECRET)
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, secretHeader: defaultSecret }))}
+                                        className="text-[11px] font-bold text-indigo-600 hover:underline"
+                                    >
+                                        Insert System Secret
+                                    </button>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={formData.secretHeader}
+                                        onChange={e => setFormData({ ...formData, secretHeader: e.target.value })}
+                                        placeholder="Airport$$26$$cron$$bulk$$delete"
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                                    />
+                                </div>
+                                <p className="text-[11px] text-slate-400 mt-1.5">
+                                    Sent as <code className="text-indigo-600 font-mono">Authorization: Bearer &lt;SECRET&gt;</code> HTTP header to authorize bulk deletion endpoint.
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

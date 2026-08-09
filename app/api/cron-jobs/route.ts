@@ -25,7 +25,35 @@ export async function GET() {
             return NextResponse.json({ error: data.message || data.error || 'Failed to fetch cron jobs from cron-job.org' }, { status: res.status });
         }
 
-        return NextResponse.json(data);
+        const rawJobs = data.jobs || [];
+
+        // Fetch detailed info for each job to retrieve extendedData.headers (Authorization header / secret)
+        const detailedJobs = await Promise.all(
+            rawJobs.map(async (j: any) => {
+                try {
+                    const detailRes = await fetch(`https://api.cron-job.org/jobs/${j.jobId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        cache: 'no-store'
+                    });
+                    if (detailRes.ok) {
+                        const detailData = await detailRes.json();
+                        return detailData.jobDetails || j;
+                    }
+                } catch (err) {
+                    console.warn(`Failed to fetch detail for job ${j.jobId}:`, err);
+                }
+                return j;
+            })
+        );
+
+        return NextResponse.json({
+            jobs: detailedJobs,
+            defaultCronSecret: process.env.CRON_SECRET || 'Airport$$26$$cron$$bulk$$delete'
+        });
     } catch (err: any) {
         console.error('Fetch Cron Jobs Error:', err);
         return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
