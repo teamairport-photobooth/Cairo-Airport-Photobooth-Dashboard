@@ -30,7 +30,8 @@ import {
     ArrowUpDown,
     Star,
     StarOff,
-    X
+    X,
+    Clock
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/components/AuthContext';
@@ -837,6 +838,22 @@ export default function ProjectDetailPage() {
                                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                                         <p className="text-xs font-bold text-slate-400 uppercase mb-2">Tag / Folder Path</p>
                                         <p className="font-medium text-slate-700">{project.cloudinaryTag || 'Not set'}</p>
+                                    </div>
+                                    <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs font-bold text-indigo-600 uppercase mb-1 flex items-center gap-1.5">
+                                                <Clock size={14} />
+                                                Cron Bulk Scheduler
+                                            </p>
+                                            <p className="text-xs text-slate-500">cron-job.org Integration</p>
+                                        </div>
+                                        <button
+                                            onClick={() => router.push('/cron-jobs')}
+                                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                                        >
+                                            Manage
+                                            <ExternalLink size={12} />
+                                        </button>
                                     </div>
                                     <div className="pt-4 border-t border-slate-100">
                                         <button

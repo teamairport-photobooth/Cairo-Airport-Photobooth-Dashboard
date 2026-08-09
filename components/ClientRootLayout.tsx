@@ -15,7 +15,8 @@ import {
     ChevronLeft,
     ChevronRight,
     PanelLeftClose,
-    PanelLeftOpen
+    PanelLeftOpen,
+    Clock
 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/components/AuthContext';
 
@@ -36,6 +37,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
     const navItems = [
         { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/', roles: [UserRole.ADMIN, UserRole.REGULAR] },
+        { label: 'Cron Scheduler', icon: <Clock size={20} />, path: '/cron-jobs', roles: [UserRole.ADMIN] },
         { label: 'User Management', icon: <Users size={20} />, path: '/users', roles: [UserRole.ADMIN] },
         { label: 'Settings', icon: <Settings size={20} />, path: '/settings', roles: [UserRole.ADMIN] },
     ];
