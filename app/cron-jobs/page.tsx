@@ -201,7 +201,7 @@ export default function CronJobsPage() {
     };
 
     const openCreateModal = () => {
-        const defaultUrl = origin ? `${origin}/api/cron/cleanup-cloudinary?key=${defaultSecret}` : '';
+        const defaultUrl = origin ? `${origin}/api/cron/cleanup-cloudinary` : '';
         setFormData({
             title: 'Cloudinary Bulk Storage Cleanup',
             url: defaultUrl,
@@ -686,7 +686,7 @@ export default function CronJobsPage() {
                                         onClick={() => {
                                             setFormData(prev => ({
                                                 ...prev,
-                                                url: `${origin}/api/cron/cleanup-cloudinary?key=${defaultSecret}`
+                                                url: `${origin}/api/cron/cleanup-cloudinary`
                                             }));
                                         }}
                                         className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-1"
