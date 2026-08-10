@@ -211,7 +211,7 @@ export default function SettingsPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Settings</h2>
-                    <p className="text-slate-500 text-sm mt-1">Manage global system configurations, Cloudinary credentials, and Cron Scheduler settings.</p>
+                    <p className="text-slate-500 text-sm mt-1">Manage global system configurations, Cloudinary credentials, and Storage Cleanup Scheduler settings.</p>
                 </div>
                 <button
                     onClick={fetchSettings}
@@ -372,7 +372,7 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* Section 3: Cron Jobs Credentials */}
+                        {/* Section 3: Storage Cleanup Credentials */}
                         <div className="bg-white rounded-3xl border border-[#d0deea] overflow-hidden shadow-xs">
                             <div className="bg-[#f0f6fa] px-8 py-6 border-b border-[#d0deea] flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -380,15 +380,15 @@ export default function SettingsPage() {
                                         <Clock size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-[#002d42]">Cron Scheduler Credentials</h3>
-                                        <p className="text-xs text-slate-500">API token for cron-job.org and cleanup authorization secret.</p>
+                                        <h3 className="font-bold text-[#002d42]">Storage Cleanup Credentials</h3>
+                                        <p className="text-xs text-slate-500">API key and secret for automated storage cleanup.</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-8 space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cron-Job.org REST API Key</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cleanup Scheduler API Key</label>
                                     <div className="relative">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                                             <Key size={18} />
@@ -398,7 +398,7 @@ export default function SettingsPage() {
                                             value={globalForm.cronJobsApiKey}
                                             onChange={e => setGlobalForm({ ...globalForm, cronJobsApiKey: e.target.value })}
                                             className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
-                                            placeholder="Bearer API Key from cron-job.org console..."
+                                            placeholder="API Key for scheduled cleanup triggers..."
                                         />
                                         <button
                                             type="button"
@@ -412,7 +412,7 @@ export default function SettingsPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cron Cleanup Authorization Secret (CRON_SECRET)</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cleanup Authorization Secret</label>
                                     <div className="relative">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                                             <Lock size={18} />
@@ -459,7 +459,7 @@ export default function SettingsPage() {
                         </div>
                     </form>
 
-                    {/* Section 4: Storage Maintenance */}
+                    {/* Section 4: Clear Images Storage */}
                     <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                         <div className="bg-slate-900 text-white px-8 py-6 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -467,8 +467,8 @@ export default function SettingsPage() {
                                     <Trash2 size={20} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-white text-lg">Storage Maintenance</h3>
-                                    <p className="text-xs text-slate-400">Purge images stored in Cloudinary folder "{globalForm.cloudinaryTag}".</p>
+                                    <h3 className="font-bold text-white text-lg">Clear Images Storage</h3>
+                                    <p className="text-xs text-slate-400">Clear images stored in Cloudinary folder &quot;{globalForm.cloudinaryTag}&quot;.</p>
                                 </div>
                             </div>
 

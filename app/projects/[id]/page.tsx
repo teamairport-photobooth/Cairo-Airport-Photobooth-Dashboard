@@ -813,9 +813,9 @@ export default function ProjectDetailPage() {
                                         <div>
                                             <p className="text-xs font-bold text-[#002d42] uppercase mb-1 flex items-center gap-1.5">
                                                 <Clock size={14} />
-                                                Cron Bulk Scheduler
+                                                Storage Cleanup Scheduler
                                             </p>
-                                            <p className="text-xs text-slate-500">cron-job.org Integration</p>
+                                            <p className="text-xs text-slate-500">Automated Image Cleanup</p>
                                         </div>
                                         <button
                                             onClick={() => router.push('/cron-jobs')}
@@ -824,7 +824,7 @@ export default function ProjectDetailPage() {
                                             Manage
                                             <ExternalLink size={12} />
                                         </button>
-                                    </div>
+                                    </div>v>
                                     <div className="pt-4 border-t border-slate-100">
                                         <button
                                             onClick={handleDeleteProject}

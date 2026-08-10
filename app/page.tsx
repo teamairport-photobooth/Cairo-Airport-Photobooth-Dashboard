@@ -411,13 +411,6 @@ export default function DashboardPage() {
                             Cairo International Airport
                         </div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">{project.name}</h1>
-                        <p className="text-slate-300 text-sm md:text-base mt-2 max-w-xl leading-relaxed">{project.description}</p>
-                    </div>
-
-                    <div className="flex flex-col items-start md:items-end gap-3">
-                        <span className="text-xs text-slate-300 font-mono bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
-                            Status: <span className="text-[#d4af37] font-bold">Active Operational Instance</span>
-                        </span>
                     </div>
                 </div>
             </div>
@@ -466,7 +459,7 @@ export default function DashboardPage() {
                         <div className="absolute top-0 right-0 p-8 opacity-5">
                             <Zap size={120} />
                         </div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Generations</p>
                                 <div className="flex items-baseline gap-2">
@@ -475,7 +468,6 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                         </div>
-                        <p className="text-xs text-slate-400 mt-4">Continuous active operation</p>
                     </div>
 
                     {/* Generations Analytics Chart */}

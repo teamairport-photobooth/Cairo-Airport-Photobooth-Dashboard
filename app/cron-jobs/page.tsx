@@ -160,7 +160,7 @@ export default function CronJobsPage() {
     };
 
     const handleDeleteJob = async (jobId: number) => {
-        if (!confirm('Are you sure you want to delete this cron job? This cannot be undone.')) return;
+        if (!confirm('Are you sure you want to delete this cleanup schedule? This cannot be undone.')) return;
         setActionLoadingId(jobId);
         try {
             const res = await fetch(`/api/cron-jobs/${jobId}`, {
@@ -427,11 +427,11 @@ export default function CronJobsPage() {
                     <div>
                         <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#d4af37]/20 text-[#d4af37] rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-[#d4af37]/30">
                             <ShieldCheck size={14} />
-                            Cron-Job.org Integration Active
+                            Automated Storage Cleanup Active
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Cron Jobs & Bulk Deletion Scheduler</h1>
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Storage Cleanup Scheduler</h1>
                         <p className="text-slate-300 text-sm md:text-base mt-2 max-w-2xl leading-relaxed">
-                            Manage automated bulk storage cleanup tasks and scheduled jobs running via <span className="text-[#d4af37] font-semibold">cron-job.org</span> REST API.
+                            Manage automated storage cleanup tasks and scheduled cleanups for your photobooth images.
                         </p>
                     </div>
 
@@ -442,14 +442,14 @@ export default function CronJobsPage() {
                             className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm transition-all border border-white/10"
                         >
                             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-                            Refresh Jobs
+                            Refresh Schedules
                         </button>
                         <button
                             onClick={openCreateModal}
                             className="flex items-center gap-2 px-6 py-2.5 bg-[#d4af37] hover:bg-[#b89628] text-[#001c2b] rounded-xl font-bold text-sm transition-all shadow-md active:scale-95"
                         >
                             <Plus size={18} />
-                            New Scheduler Job
+                            New Cleanup Schedule
                         </button>
                     </div>
                 </div>
@@ -470,23 +470,23 @@ export default function CronJobsPage() {
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-[#d0deea] text-slate-400">
                     <Loader2 className="animate-spin text-[#002d42] mb-4" size={40} />
-                    <p className="font-medium text-slate-500">Connecting to cron-job.org API...</p>
+                    <p className="font-medium text-slate-500">Connecting to storage cleanup service...</p>
                 </div>
             ) : jobs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-dashed border-[#d0deea] text-center">
                     <div className="w-16 h-16 bg-[#f0f6fa] text-[#002d42] rounded-2xl flex items-center justify-center mb-4">
                         <Clock size={32} />
                     </div>
-                    <h3 className="text-lg font-bold text-[#002d42]">No Cron Jobs Configured</h3>
+                    <h3 className="text-lg font-bold text-[#002d42]">No Cleanup Schedules Configured</h3>
                     <p className="text-slate-500 text-sm max-w-md mt-2">
-                        You don't have any cron jobs set up in your cron-job.org account yet. Create your first job to schedule automatic storage cleanups.
+                        You don't have any storage cleanup schedules set up yet. Create your first schedule to start automated image cleanups.
                     </p>
                     <button
                         onClick={openCreateModal}
-                        className="mt-6 flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                        className="mt-6 flex items-center gap-2 px-6 py-3 bg-[#002d42] text-white rounded-xl font-bold text-sm shadow-md hover:bg-[#003854] transition-all"
                     >
                         <Plus size={18} />
-                        Add First Scheduler Job
+                        Add First Cleanup Schedule
                     </button>
                 </div>
             ) : (
@@ -505,7 +505,7 @@ export default function CronJobsPage() {
                                             {renderStatusBadge(job.lastStatus)}
                                         </div>
                                         <p className="text-xs text-slate-400 font-mono flex items-center gap-1.5 pt-1">
-                                            <span>Job ID: {job.jobId}</span>
+                                            <span>Schedule ID: {job.jobId}</span>
                                             <span>•</span>
                                             <span>{formatSchedule(job.schedule)}</span>
                                         </p>
@@ -617,11 +617,11 @@ export default function CronJobsPage() {
                                             className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
                                         >
                                             <Edit3 size={14} />
-                                            Edit Job & Secret
+                                            Edit Schedule
                                         </button>
                                         <button
                                             onClick={() => fetchJobHistory(job)}
-                                            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-all"
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-[#002d42]/10 hover:bg-[#002d42]/20 text-[#002d42] rounded-xl text-xs font-bold transition-all"
                                         >
                                             <History size={14} />
                                             View History Logs
@@ -634,7 +634,7 @@ export default function CronJobsPage() {
                                         className="flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
                                     >
                                         {actionLoadingId === job.jobId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                        Delete Job
+                                        Delete Schedule
                                     </button>
                                 </div>
                             </div>
@@ -654,8 +654,8 @@ export default function CronJobsPage() {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-slate-800">
-                                {editingJob ? 'Edit Scheduled Job & Secret' : 'Create New Cron Job'}
+                            <h2 className="text-2xl font-bold text-[#002d42]">
+                                {editingJob ? 'Edit Storage Cleanup Schedule' : 'Create Storage Cleanup Schedule'}
                             </h2>
                             <button
                                 onClick={() => { setShowCreateModal(false); setEditingJob(null); }}
@@ -667,14 +667,14 @@ export default function CronJobsPage() {
 
                         <form onSubmit={handleSaveJob} className="space-y-6">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Job Title</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Schedule Title</label>
                                 <input
                                     required
                                     type="text"
                                     value={formData.title}
                                     onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    placeholder="e.g. Bulk Storage Cleanup"
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                                    placeholder="e.g. Daily Cairo Photobooth Cleanup"
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#002d42] text-sm"
                                 />
                             </div>
 
@@ -807,10 +807,10 @@ export default function CronJobsPage() {
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 text-sm flex items-center justify-center gap-2"
+                                    className="flex-1 py-3 bg-[#002d42] text-white font-bold rounded-xl hover:bg-[#003854] transition-colors shadow-md text-sm flex items-center justify-center gap-2"
                                 >
                                     {isSaving ? <Loader2 size={18} className="animate-spin" /> : null}
-                                    {isSaving ? 'Saving...' : editingJob ? 'Update Job' : 'Create Job'}
+                                    {isSaving ? 'Saving...' : editingJob ? 'Update Schedule' : 'Create Schedule'}
                                 </button>
                             </div>
                         </form>
@@ -831,7 +831,7 @@ export default function CronJobsPage() {
                     >
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h2 className="text-2xl font-bold text-slate-800">Job Execution History</h2>
+                                <h2 className="text-2xl font-bold text-[#002d42]">Cleanup History Logs</h2>
                                 <p className="text-xs text-slate-500 mt-1">{historyJob.title} • ID: {historyJob.jobId}</p>
                             </div>
                             <button
