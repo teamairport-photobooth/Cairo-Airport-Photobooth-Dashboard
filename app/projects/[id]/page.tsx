@@ -824,7 +824,7 @@ export default function ProjectDetailPage() {
                                             Manage
                                             <ExternalLink size={12} />
                                         </button>
-                                    </div>v>
+                                    </div>
                                     <div className="pt-4 border-t border-slate-100">
                                         <button
                                             onClick={handleDeleteProject}
