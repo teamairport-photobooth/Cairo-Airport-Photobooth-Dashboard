@@ -16,7 +16,9 @@ import {
     Trash2,
     Check,
     Clock,
-    Lock
+    Lock,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -37,6 +39,12 @@ export default function SettingsPage() {
         cronJobsApiKey: '',
         cronSecret: ''
     });
+
+    const [showFields, setShowFields] = useState<{ [key: string]: boolean }>({});
+
+    const toggleShow = (fieldKey: string) => {
+        setShowFields(prev => ({ ...prev, [fieldKey]: !prev[fieldKey] }));
+    };
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -318,13 +326,21 @@ export default function SettingsPage() {
                                                 <Key size={18} />
                                             </div>
                                             <input
-                                                type="text"
+                                                type={showFields.cloudinaryApiKey ? 'text' : 'password'}
                                                 value={globalForm.cloudinaryApiKey}
                                                 onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiKey: e.target.value })}
-                                                className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                                className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
                                                 placeholder="API Key"
                                                 required
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleShow('cloudinaryApiKey')}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
+                                                title={showFields.cloudinaryApiKey ? 'Hide credential' : 'Show credential'}
+                                            >
+                                                {showFields.cloudinaryApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
                                     </div>
 
@@ -335,13 +351,21 @@ export default function SettingsPage() {
                                                 <ShieldCheck size={18} />
                                             </div>
                                             <input
-                                                type="password"
+                                                type={showFields.cloudinaryApiSecret ? 'text' : 'password'}
                                                 value={globalForm.cloudinaryApiSecret}
                                                 onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiSecret: e.target.value })}
-                                                className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                                className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
                                                 placeholder="••••••••••••••••"
                                                 required
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleShow('cloudinaryApiSecret')}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
+                                                title={showFields.cloudinaryApiSecret ? 'Hide credential' : 'Show credential'}
+                                            >
+                                                {showFields.cloudinaryApiSecret ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -349,14 +373,14 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Section 3: Cron Jobs Credentials */}
-                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                            <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                        <div className="bg-white rounded-3xl border border-[#d0deea] overflow-hidden shadow-xs">
+                            <div className="bg-[#f0f6fa] px-8 py-6 border-b border-[#d0deea] flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
+                                    <div className="p-2.5 bg-[#002d42] rounded-xl text-[#d4af37]">
                                         <Clock size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800">Cron Scheduler Credentials</h3>
+                                        <h3 className="font-bold text-[#002d42]">Cron Scheduler Credentials</h3>
                                         <p className="text-xs text-slate-500">API token for cron-job.org and cleanup authorization secret.</p>
                                     </div>
                                 </div>
@@ -370,12 +394,20 @@ export default function SettingsPage() {
                                             <Key size={18} />
                                         </div>
                                         <input
-                                            type="password"
+                                            type={showFields.cronJobsApiKey ? 'text' : 'password'}
                                             value={globalForm.cronJobsApiKey}
                                             onChange={e => setGlobalForm({ ...globalForm, cronJobsApiKey: e.target.value })}
-                                            className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                            className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
                                             placeholder="Bearer API Key from cron-job.org console..."
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleShow('cronJobsApiKey')}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
+                                            title={showFields.cronJobsApiKey ? 'Hide credential' : 'Show credential'}
+                                        >
+                                            {showFields.cronJobsApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
                                     </div>
                                 </div>
 
@@ -386,12 +418,20 @@ export default function SettingsPage() {
                                             <Lock size={18} />
                                         </div>
                                         <input
-                                            type="text"
+                                            type={showFields.cronSecret ? 'text' : 'password'}
                                             value={globalForm.cronSecret}
                                             onChange={e => setGlobalForm({ ...globalForm, cronSecret: e.target.value })}
-                                            className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                            className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
                                             placeholder="Secret phrase for cleanup verification..."
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleShow('cronSecret')}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
+                                            title={showFields.cronSecret ? 'Hide credential' : 'Show credential'}
+                                        >
+                                            {showFields.cronSecret ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -407,9 +447,9 @@ export default function SettingsPage() {
                                     disabled={isSaving}
                                     className={`
                                         flex items-center gap-2 px-8 py-3 rounded-2xl font-bold transition-all shadow-lg
-                                        ${isSaving
+                                         ${isSaving
                                             ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                            : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-indigo-200'}
+                                            : 'bg-[#002d42] text-white hover:bg-[#003854] active:scale-95 shadow-md'}
                                     `}
                                 >
                                     {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
