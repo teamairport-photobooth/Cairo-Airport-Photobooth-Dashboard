@@ -1,9 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteCloudinaryImages } from '@/services/cloudinaryService';
-import { getGlobalSettingsServer } from '@/utils/supabase';
+import { supabase, getGlobalSettingsServer } from '@/utils/supabase';
 
 export async function POST(request: NextRequest) {
     try {
+        // Authorization Guard: Only ADMIN users can delete images
+        const token = request.headers.get('x-supabase-auth');
+        if (!token) {
+            return NextResponse.json({ error: 'Unauthorized: Missing authentication token' }, { status: 401 });
+        }
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized: Invalid user session' }, { status: 401 });
+        }
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile || profile.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Forbidden: Regular users are not allowed to delete images' }, { status: 403 });
+        }
+
         const body = await request.json();
         const { public_id, public_ids, cloudName: reqCloudName, apiKey: reqApiKey, apiSecret: reqApiSecret } = body;
 
@@ -43,3 +64,4 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message || 'Failed to delete images' }, { status: 500 });
     }
 }
+

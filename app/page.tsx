@@ -220,14 +220,18 @@ export default function DashboardPage() {
     };
 
     const handleDeleteImage = async (img: CloudinaryImage) => {
-        if (!project || deletingId) return;
+        if (!project || deletingId || user?.role !== UserRole.ADMIN) return;
         if (!confirm('Are you sure you want to delete this image from Cloudinary? This action cannot be undone.')) return;
 
         setDeletingId(img.public_id);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch('/api/cloudinary/delete', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-supabase-auth': session?.access_token || ''
+                },
                 body: JSON.stringify({
                     public_id: img.public_id
                 })
@@ -249,14 +253,18 @@ export default function DashboardPage() {
     };
 
     const handleBulkDelete = async () => {
-        if (!project || selectedIds.length === 0 || isBulkDeleting) return;
+        if (!project || selectedIds.length === 0 || isBulkDeleting || user?.role !== UserRole.ADMIN) return;
         if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected image(s) from Cloudinary? This action cannot be undone.`)) return;
 
         setIsBulkDeleting(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch('/api/cloudinary/delete', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-supabase-auth': session?.access_token || ''
+                },
                 body: JSON.stringify({
                     public_ids: selectedIds
                 })
@@ -598,14 +606,16 @@ export default function DashboardPage() {
                                     <Download size={18} />
                                     Download Selected
                                 </button>
-                                <button
-                                    onClick={handleBulkDelete}
-                                    disabled={selectedIds.length === 0 || isBulkDeleting}
-                                    className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none"
-                                >
-                                    {isBulkDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                                    {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
-                                </button>
+                                {user?.role === UserRole.ADMIN && (
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        disabled={selectedIds.length === 0 || isBulkDeleting}
+                                        className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none"
+                                    >
+                                        {isBulkDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                                        {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}
@@ -668,21 +678,23 @@ export default function DashboardPage() {
                                                     >
                                                         <Info size={14} />
                                                     </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteImage(img);
-                                                        }}
-                                                        disabled={deletingId === img.public_id}
-                                                        className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-red-600 transition-colors disabled:opacity-50"
-                                                        title="Delete Image"
-                                                    >
-                                                        {deletingId === img.public_id ? (
-                                                            <Loader2 size={14} className="animate-spin" />
-                                                        ) : (
-                                                            <Trash2 size={14} />
-                                                        )}
-                                                    </button>
+                                                    {user?.role === UserRole.ADMIN && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteImage(img);
+                                                            }}
+                                                            disabled={deletingId === img.public_id}
+                                                            className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                                                            title="Delete Image"
+                                                        >
+                                                            {deletingId === img.public_id ? (
+                                                                <Loader2 size={14} className="animate-spin" />
+                                                            ) : (
+                                                                <Trash2 size={14} />
+                                                            )}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
