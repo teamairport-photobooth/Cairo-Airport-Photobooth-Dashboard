@@ -291,34 +291,34 @@ export default function SettingsPage() {
                                 </div>
                             </div>
 
-                            <div className="p-8 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">Cloud Name</label>
-                                        <input
-                                            type="text"
-                                            value={globalForm.cloudinaryCloudName}
-                                            onChange={e => setGlobalForm({ ...globalForm, cloudinaryCloudName: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
-                                            placeholder="Cloud Name"
-                                            required
-                                        />
+                            <div className="p-8">
+                                <div className="border border-red-200 bg-red-50/20 rounded-2xl p-5 space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">Cloud Name</label>
+                                            <input
+                                                type="text"
+                                                value={globalForm.cloudinaryCloudName}
+                                                onChange={e => setGlobalForm({ ...globalForm, cloudinaryCloudName: e.target.value })}
+                                                className="w-full px-5 py-3 bg-white border border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-400/20 rounded-2xl outline-none transition-all font-mono text-sm"
+                                                placeholder="Cloud Name"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">Asset Tag / Folder</label>
+                                            <input
+                                                type="text"
+                                                value={globalForm.cloudinaryTag}
+                                                onChange={e => setGlobalForm({ ...globalForm, cloudinaryTag: e.target.value })}
+                                                className="w-full px-5 py-3 bg-white border border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-400/20 rounded-2xl outline-none transition-all font-mono text-sm"
+                                                placeholder="e.g. cairo-airport-photobooth"
+                                                required
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">Asset Tag / Folder</label>
-                                        <input
-                                            type="text"
-                                            value={globalForm.cloudinaryTag}
-                                            onChange={e => setGlobalForm({ ...globalForm, cloudinaryTag: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
-                                            placeholder="e.g. cairo-airport-photobooth"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="border border-red-200 bg-red-50/20 rounded-2xl p-5 space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <label className="block text-sm font-bold text-slate-700 mb-2">API Key</label>
