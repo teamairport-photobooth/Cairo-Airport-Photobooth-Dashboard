@@ -166,7 +166,7 @@ export default function UserManagementPage() {
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
+                    className="flex items-center gap-2 bg-[#002d42] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#003854] transition-all shadow-md active:scale-95"
                 >
                     <Plus size={20} />
                     Grant New Access
@@ -175,25 +175,25 @@ export default function UserManagementPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                    <div className="bg-white border border-[#d0deea] rounded-2xl shadow-xs overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                <UserIcon className="text-indigo-500" size={18} />
+                            <h3 className="font-bold text-[#002d42] flex items-center gap-2">
+                                <UserIcon className="text-[#004869]" size={18} />
                                 Active Profiles
                             </h3>
-                            <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg uppercase">
+                            <span className="text-xs font-bold text-[#002d42] bg-[#f0f6fa] px-2.5 py-1 rounded-lg uppercase border border-[#004869]/10">
                                 {profiles.length} Users Logged In
                             </span>
                         </div>
                         {loading ? (
                             <div className="p-20 flex flex-col items-center justify-center text-slate-400">
-                                <Loader2 className="animate-spin mb-4" size={32} />
+                                <Loader2 className="animate-spin mb-4 text-[#002d42]" size={32} />
                                 <p className="font-medium">Fetching active users...</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
-                                    <thead className="bg-slate-50 border-b border-slate-100">
+                                    <thead className="bg-[#f0f6fa] border-b border-slate-100">
                                         <tr>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">User</th>
                                             <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Role</th>
@@ -209,24 +209,24 @@ export default function UserManagementPage() {
                                                         {p.avatarUrl ? (
                                                             <img src={p.avatarUrl} alt={p.name} className="w-10 h-10 rounded-xl object-cover" />
                                                         ) : (
-                                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold">
+                                                            <div className="w-10 h-10 rounded-xl bg-[#002d42]/10 flex items-center justify-center text-[#002d42] font-bold">
                                                                 {p.name.charAt(0)}
                                                             </div>
                                                         )}
                                                         <div>
-                                                            <p className="font-bold text-slate-800">{p.name}</p>
+                                                            <p className="font-bold text-[#002d42]">{p.name}</p>
                                                             <p className="text-xs text-slate-500">{p.email}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.role === UserRole.ADMIN ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.role === UserRole.ADMIN ? 'bg-amber-50 text-[#d4af37] border border-amber-200' : 'bg-blue-50 text-[#004869] border border-blue-100'}`}>
                                                         {p.role === UserRole.ADMIN ? <Shield size={10} /> : <UserIcon size={10} />}
                                                         {p.role}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
+                                                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-lg">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                                         Active
                                                     </span>
@@ -250,25 +250,25 @@ export default function UserManagementPage() {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xl">
+                    <div className="bg-[#001c2b] rounded-2xl p-6 text-white shadow-xl border border-[#003854]">
                         <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                            <Shield className="text-indigo-400" size={20} />
+                            <Shield className="text-[#d4af37]" size={20} />
                             Authorized Whitelist
                         </h3>
-                        <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-                            These emails are pre-authorized to join via Google. If an email isn't on this list, they cannot log in.
+                        <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                            These emails are pre-authorized to join via Google. If an email isn't on this list, access is blocked.
                         </p>
                         <div className="space-y-3">
                             {whitelist.map(entry => (
-                                <div key={entry.email} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 group">
+                                <div key={entry.email} className="flex items-center justify-between p-3 bg-[#00283c] rounded-xl border border-[#003854] group">
                                     <div className="overflow-hidden">
-                                        <p className="text-sm font-bold truncate">{entry.email}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{entry.role}</p>
+                                        <p className="text-sm font-bold truncate text-white">{entry.email}</p>
+                                        <p className="text-[10px] text-[#d4af37] uppercase font-black tracking-widest">{entry.role}</p>
                                     </div>
                                     <button
                                         onClick={() => handleDeleteUser(entry.email)}
-                                        disabled={entry.email === currentUser.email}
-                                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:hidden"
+                                        disabled={entry.email === currentUser?.email}
+                                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:hidden"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -281,19 +281,19 @@ export default function UserManagementPage() {
 
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+                    <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300 border border-[#d0deea]">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600">
+                            <div className="p-3 bg-[#f0f6fa] rounded-2xl text-[#002d42]">
                                 <Plus size={24} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-slate-800">Grant Access</h2>
+                                <h2 className="text-xl font-bold text-[#002d42]">Grant Access</h2>
                                 <p className="text-slate-500 text-sm">Add a user to the secure whitelist.</p>
                             </div>
                         </div>
 
                         {error && (
-                            <div className="mb-6 flex items-center gap-3 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold border border-red-100 animate-in shake duration-300">
+                            <div className="mb-6 flex items-center gap-3 p-4 bg-red-50 text-[#d9381e] rounded-2xl text-sm font-bold border border-red-100 animate-in shake duration-300">
                                 <AlertCircle size={18} />
                                 {error}
                             </div>
@@ -309,7 +309,7 @@ export default function UserManagementPage() {
                                         type="email"
                                         value={newUser.email}
                                         onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] focus:bg-white outline-none transition-all"
                                         placeholder="user@gmail.com"
                                     />
                                 </div>
@@ -321,7 +321,7 @@ export default function UserManagementPage() {
                                     <select
                                         value={newUser.role}
                                         onChange={e => setNewUser({ ...newUser, role: e.target.value as UserRole })}
-                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all appearance-none"
+                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] focus:bg-white outline-none transition-all appearance-none"
                                     >
                                         <option value={UserRole.REGULAR}>Regular User</option>
                                         <option value={UserRole.ADMIN}>Super Admin</option>
@@ -339,7 +339,7 @@ export default function UserManagementPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-indigo-600 transition-all shadow-lg active:scale-95"
+                                    className="flex-1 py-4 bg-[#002d42] text-white font-bold rounded-2xl hover:bg-[#003854] transition-all shadow-lg active:scale-95"
                                 >
                                     Authorize User
                                 </button>

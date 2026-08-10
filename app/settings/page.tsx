@@ -230,14 +230,14 @@ export default function SettingsPage() {
                         )}
 
                         {/* Section 1: Photobooth Details */}
-                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                            <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                        <div className="bg-white rounded-3xl border border-[#d0deea] overflow-hidden shadow-xs">
+                            <div className="bg-[#f0f6fa] px-8 py-6 border-b border-[#d0deea] flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
+                                    <div className="p-2.5 bg-[#002d42] rounded-xl text-[#d4af37]">
                                         <FolderKanban size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800">Photobooth Instance Details</h3>
+                                        <h3 className="font-bold text-[#002d42]">Photobooth Instance Details</h3>
                                         <p className="text-xs text-slate-500">Configure display name and description.</p>
                                     </div>
                                 </div>
@@ -250,7 +250,7 @@ export default function SettingsPage() {
                                         type="text"
                                         value={projectForm.name}
                                         onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all"
                                         placeholder="e.g. Cairo Airport AI Photobooth"
                                         required
                                     />
@@ -261,7 +261,7 @@ export default function SettingsPage() {
                                     <textarea
                                         value={projectForm.description}
                                         onChange={e => setProjectForm({ ...projectForm, description: e.target.value })}
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all"
                                         placeholder="Description..."
                                         rows={3}
                                     />
@@ -270,14 +270,14 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Section 2: Cloudinary Global Credentials */}
-                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                            <div className="bg-slate-50 px-8 py-6 border-b border-slate-200 flex items-center justify-between">
+                        <div className="bg-white rounded-3xl border border-[#d0deea] overflow-hidden shadow-xs">
+                            <div className="bg-[#f0f6fa] px-8 py-6 border-b border-[#d0deea] flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-indigo-600 rounded-xl text-white">
+                                    <div className="p-2.5 bg-[#002d42] rounded-xl text-[#d4af37]">
                                         <Cloud size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800">Cloudinary Integration</h3>
+                                        <h3 className="font-bold text-[#002d42]">Cloudinary Integration</h3>
                                         <p className="text-xs text-slate-500">Global Cloudinary credentials and asset tag folder.</p>
                                     </div>
                                 </div>
@@ -291,7 +291,7 @@ export default function SettingsPage() {
                                             type="text"
                                             value={globalForm.cloudinaryCloudName}
                                             onChange={e => setGlobalForm({ ...globalForm, cloudinaryCloudName: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm"
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
                                             placeholder="Cloud Name"
                                             required
                                         />

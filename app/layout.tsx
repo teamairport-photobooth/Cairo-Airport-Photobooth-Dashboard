@@ -7,8 +7,13 @@ import ClientRootLayout from "@/components/ClientRootLayout";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "AI Photobooth Dashboard",
-    description: "Management dashboard for AI Photobooth projects",
+    title: "Cairo Airport - AI Photobooth Console",
+    description: "Official Cairo Airport Company AI Photobooth Management Console",
+    icons: {
+        icon: "/CAC-Logo.png",
+        shortcut: "/CAC-Logo.png",
+        apple: "/CAC-Logo.png",
+    },
 };
 
 export default function RootLayout({

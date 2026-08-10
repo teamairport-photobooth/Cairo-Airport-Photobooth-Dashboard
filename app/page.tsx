@@ -400,36 +400,36 @@ export default function DashboardPage() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
             {/* Header Banner */}
-            <div className="bg-slate-900 rounded-3xl p-8 md:p-10 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute -right-10 -bottom-10 opacity-10 text-indigo-400 pointer-events-none">
-                    <Zap size={240} />
+            <div className="bg-gradient-to-r from-[#001c2b] via-[#002d42] to-[#003854] rounded-3xl p-8 md:p-10 text-white shadow-2xl relative overflow-hidden border border-[#004869]/30">
+                <div className="absolute -right-6 -bottom-6 opacity-15 pointer-events-none">
+                    <img src="/CAC-Logo.png" alt="Cairo Airport Logo" className="w-80 h-auto object-contain" />
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                     <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-500/30">
-                            <Zap size={14} fill="currentColor" />
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#d4af37]/20 text-[#d4af37] rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-[#d4af37]/30">
+                            <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
                             Cairo International Airport
                         </div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">{project.name}</h1>
-                        <p className="text-slate-400 text-sm md:text-base mt-2 max-w-xl leading-relaxed">{project.description}</p>
+                        <p className="text-slate-300 text-sm md:text-base mt-2 max-w-xl leading-relaxed">{project.description}</p>
                     </div>
 
                     <div className="flex flex-col items-start md:items-end gap-3">
-                        <p className="text-xs text-slate-400 font-mono">
-                            Status: <span className="text-indigo-300 font-bold">Active Instance</span>
-                        </p>
+                        <span className="text-xs text-slate-300 font-mono bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+                            Status: <span className="text-[#d4af37] font-bold">Active Operational Instance</span>
+                        </span>
                     </div>
                 </div>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm w-fit">
+            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-[#d0deea] shadow-sm w-fit">
                 <button
                     onClick={() => setActiveTab('overview')}
                     className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         activeTab === 'overview'
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            ? 'bg-[#002d42] text-[#d4af37] shadow-md'
+                            : 'text-slate-600 hover:text-[#002d42] hover:bg-slate-50'
                     }`}
                 >
                     Overview & Analytics
@@ -438,8 +438,8 @@ export default function DashboardPage() {
                     onClick={() => setActiveTab('images')}
                     className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         activeTab === 'images'
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            ? 'bg-[#002d42] text-[#d4af37] shadow-md'
+                            : 'text-slate-600 hover:text-[#002d42] hover:bg-slate-50'
                     }`}
                 >
                     Generated Images
@@ -449,8 +449,8 @@ export default function DashboardPage() {
                         onClick={() => setActiveTab('logs')}
                         className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                             activeTab === 'logs'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                ? 'bg-[#002d42] text-[#d4af37] shadow-md'
+                                : 'text-slate-600 hover:text-[#002d42] hover:bg-slate-50'
                         }`}
                     >
                         API Logs
@@ -528,17 +528,17 @@ export default function DashboardPage() {
                                 <AreaChart data={chartData}>
                                     <defs>
                                         <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                                            <stop offset="5%" stopColor="#005d87" stopOpacity={0.2} />
+                                            <stop offset="95%" stopColor="#005d87" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                                     <Tooltip
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                        contentStyle={{ borderRadius: '12px', border: '1px solid #d0deea', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.08)' }}
                                     />
-                                    <Area type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+                                    <Area type="monotone" dataKey="count" stroke="#004869" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -583,25 +583,25 @@ export default function DashboardPage() {
                     </div>
 
                     {selectedIds.length > 0 && images.length > 0 && (
-                        <div className="flex items-center justify-between mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 animate-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-between mb-6 p-4 bg-[#f0f6fa] rounded-2xl border border-[#004869]/20 animate-in slide-in-from-top-2 duration-300">
                             <div className="flex items-center gap-4">
                                 <button
                                     onClick={toggleSelectAll}
-                                    className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-2"
+                                    className="text-sm font-bold text-[#002d42] hover:text-[#004869] flex items-center gap-2"
                                 >
-                                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedIds.length === images.length ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-indigo-300'}`}>
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedIds.length === images.length ? 'bg-[#002d42] border-[#002d42] text-[#d4af37]' : 'bg-white border-[#004869]/40'}`}>
                                         {selectedIds.length === images.length && <Check size={14} />}
                                     </div>
                                     {selectedIds.length === images.length ? 'Deselect All' : 'Select All'}
                                 </button>
-                                <span className="text-sm text-indigo-400">|</span>
-                                <span className="text-sm font-medium text-indigo-600">{selectedIds.length} images selected</span>
+                                <span className="text-sm text-slate-300">|</span>
+                                <span className="text-sm font-medium text-[#002d42]">{selectedIds.length} images selected</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleBulkDownload}
                                     disabled={selectedIds.length === 0}
-                                    className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
+                                    className="flex items-center gap-2 px-6 py-2 bg-[#002d42] text-white rounded-xl text-sm font-bold hover:bg-[#003854] transition-all shadow-md disabled:opacity-50 disabled:shadow-none"
                                 >
                                     <Download size={18} />
                                     Download Selected
@@ -610,7 +610,7 @@ export default function DashboardPage() {
                                     <button
                                         onClick={handleBulkDelete}
                                         disabled={selectedIds.length === 0 || isBulkDeleting}
-                                        className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none"
+                                        className="flex items-center gap-2 px-6 py-2 bg-[#d9381e] text-white rounded-xl text-sm font-bold hover:bg-[#b82b14] transition-all shadow-md disabled:opacity-50 disabled:shadow-none"
                                     >
                                         {isBulkDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                                         {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}

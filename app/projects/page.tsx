@@ -76,19 +76,19 @@ export default function ProjectsPage() {
                         placeholder="Search projects..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                        className="w-full pl-10 pr-4 py-2 border border-[#d0deea] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002d42] bg-white"
                     />
                 </div>
             </div>
 
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-slate-100 text-slate-400">
-                    <Loader2 className="animate-spin mb-4" size={48} />
+                    <Loader2 className="animate-spin mb-4 text-[#002d42]" size={48} />
                     <p className="font-medium">Loading photobooth instances...</p>
                 </div>
             ) : filteredProjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-slate-100 text-slate-400 text-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                    <div className="w-16 h-16 bg-[#f0f6fa] rounded-full flex items-center justify-center mb-4 text-[#002d42]">
                         <FolderKanban size={32} />
                     </div>
                     <p className="font-medium text-slate-600">No projects found</p>
@@ -99,23 +99,23 @@ export default function ProjectsPage() {
                         <Link
                             key={project.id}
                             href={`/projects/${project.id}`}
-                            className="group bg-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-500 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                            className="group bg-white p-6 rounded-2xl border border-[#d0deea] hover:border-[#002d42] hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
                         >
                             <div>
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
+                                    <span className="text-xs font-mono font-bold text-[#002d42] bg-[#f0f6fa] px-2.5 py-1 rounded-md border border-[#004869]/10">
                                         Photobooth Instance
                                     </span>
-                                    <ExternalLink size={18} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                    <ExternalLink size={18} className="text-slate-300 group-hover:text-[#002d42] transition-colors" />
                                 </div>
 
-                                <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{project.name}</h3>
+                                <h3 className="text-lg font-bold text-[#002d42] mb-2 group-hover:text-[#004869] transition-colors">{project.name}</h3>
                                 <p className="text-sm text-slate-500 line-clamp-2">{project.description}</p>
                             </div>
 
                             <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                                 <span>Total Generations</span>
-                                <span className="font-bold text-slate-700">{(project.totalUsage || 0).toLocaleString()}</span>
+                                <span className="font-bold text-[#002d42]">{(project.totalUsage || 0).toLocaleString()}</span>
                             </div>
                         </Link>
                     ))}
@@ -124,3 +124,4 @@ export default function ProjectsPage() {
         </div>
     );
 }
+

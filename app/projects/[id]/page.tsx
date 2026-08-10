@@ -669,23 +669,23 @@ export default function ProjectDetailPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-[#d0deea] shadow-xs">
                         <button
                             onClick={() => setActiveTab('overview')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'overview' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'overview' ? 'bg-[#002d42] text-[#d4af37] shadow-md' : 'text-slate-600 hover:text-[#002d42]'}`}
                         >
                             Overview
                         </button>
                         <button
                             onClick={() => setActiveTab('images')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'images' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'images' ? 'bg-[#002d42] text-[#d4af37] shadow-md' : 'text-slate-600 hover:text-[#002d42]'}`}
                         >
                             Generated Images
                         </button>
                         {user.role === UserRole.ADMIN && (
                             <button
                                 onClick={() => setActiveTab('logs')}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'logs' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'logs' ? 'bg-[#002d42] text-[#d4af37] shadow-md' : 'text-slate-600 hover:text-[#002d42]'}`}
                             >
                                 API Logs
                             </button>
@@ -763,17 +763,17 @@ export default function ProjectDetailPage() {
                                         <AreaChart data={chartData}>
                                             <defs>
                                                 <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1} />
-                                                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                                                    <stop offset="5%" stopColor="#005d87" stopOpacity={0.2} />
+                                                    <stop offset="95%" stopColor="#005d87" stopOpacity={0} />
                                                 </linearGradient>
                                             </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                                             <Tooltip
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                contentStyle={{ borderRadius: '12px', border: '1px solid #d0deea', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.08)' }}
                                             />
-                                            <Area type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+                                            <Area type="monotone" dataKey="count" stroke="#004869" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -790,7 +790,7 @@ export default function ProjectDetailPage() {
                                     </h3>
                                     <button
                                         onClick={() => setShowEditModal(true)}
-                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg transition-colors"
+                                        className="text-xs font-bold text-[#002d42] hover:text-[#004869] bg-[#d0deea]/30 px-3 py-1 rounded-lg transition-colors"
                                     >
                                         Edit
                                     </button>
@@ -809,9 +809,9 @@ export default function ProjectDetailPage() {
                                             <ExternalLink size={12} />
                                         </button>
                                     </div>
-                                    <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                                    <div className="p-4 bg-[#002d42]/5 rounded-xl border border-[#002d42]/10 flex items-center justify-between">
                                         <div>
-                                            <p className="text-xs font-bold text-indigo-600 uppercase mb-1 flex items-center gap-1.5">
+                                            <p className="text-xs font-bold text-[#002d42] uppercase mb-1 flex items-center gap-1.5">
                                                 <Clock size={14} />
                                                 Cron Bulk Scheduler
                                             </p>
@@ -819,7 +819,7 @@ export default function ProjectDetailPage() {
                                         </div>
                                         <button
                                             onClick={() => router.push('/cron-jobs')}
-                                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                                            className="px-3 py-1.5 bg-[#002d42] hover:bg-[#003854] text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1"
                                         >
                                             Manage
                                             <ExternalLink size={12} />
@@ -847,7 +847,7 @@ export default function ProjectDetailPage() {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                             <div>
                                 <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                    <ImageIcon className="text-indigo-500" />
+                                    <ImageIcon className="text-[#002d42]" />
                                     Gallery
                                 </h3>
                             </div>
@@ -879,25 +879,25 @@ export default function ProjectDetailPage() {
                         </div>
 
                         {selectedIds.length > 0 && images.length > 0 && (
-                            <div className="flex items-center justify-between mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 animate-in slide-in-from-top-2 duration-300">
+                            <div className="flex items-center justify-between mb-6 p-4 bg-[#002d42]/5 rounded-2xl border border-[#002d42]/10 animate-in slide-in-from-top-2 duration-300">
                                 <div className="flex items-center gap-4">
                                     <button
                                         onClick={toggleSelectAll}
-                                        className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-2"
+                                        className="text-sm font-bold text-[#002d42] hover:text-[#004869] flex items-center gap-2"
                                     >
-                                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedIds.length === images.length ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-indigo-300'}`}>
+                                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedIds.length === images.length ? 'bg-[#002d42] border-[#002d42] text-white' : 'bg-white border-[#002d42]/30'}`}>
                                             {selectedIds.length === images.length && <Check size={14} />}
                                         </div>
                                         {selectedIds.length === images.length ? 'Deselect All' : 'Select All'}
                                     </button>
-                                    <span className="text-sm text-indigo-400">|</span>
-                                    <span className="text-sm font-medium text-indigo-600">{selectedIds.length} images selected</span>
+                                    <span className="text-sm text-[#002d42]/40">|</span>
+                                    <span className="text-sm font-medium text-[#002d42]">{selectedIds.length} images selected</span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={handleBulkDownload}
                                         disabled={selectedIds.length === 0}
-                                        className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
+                                        className="flex items-center gap-2 px-6 py-2 bg-[#002d42] text-white rounded-xl text-sm font-bold hover:bg-[#003854] transition-all shadow-md disabled:opacity-50 disabled:shadow-none"
                                     >
                                         <Download size={18} />
                                         Download Selected
@@ -906,7 +906,7 @@ export default function ProjectDetailPage() {
                                         <button
                                             onClick={handleBulkDelete}
                                             disabled={selectedIds.length === 0 || isBulkDeleting}
-                                            className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none"
+                                            className="flex items-center gap-2 px-6 py-2 bg-[#d9381e] text-white rounded-xl text-sm font-bold hover:bg-[#b82b14] transition-all shadow-md disabled:opacity-50 disabled:shadow-none"
                                         >
                                             {isBulkDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                                             {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}

@@ -419,19 +419,19 @@ export default function CronJobsPage() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
             {/* Header Banner */}
-            <div className="bg-slate-900 rounded-3xl p-8 md:p-10 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute -right-10 -bottom-10 opacity-10 text-indigo-400 pointer-events-none">
-                    <Clock size={240} />
+            <div className="bg-gradient-to-r from-[#001c2b] via-[#002d42] to-[#003854] rounded-3xl p-8 md:p-10 text-white shadow-2xl relative overflow-hidden border border-[#004869]/30">
+                <div className="absolute -right-6 -bottom-6 opacity-15 pointer-events-none">
+                    <img src="/CAC-Logo.png" alt="Cairo Airport Logo" className="w-80 h-auto object-contain" />
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                     <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-500/30">
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#d4af37]/20 text-[#d4af37] rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-[#d4af37]/30">
                             <ShieldCheck size={14} />
                             Cron-Job.org Integration Active
                         </div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Cron Jobs & Bulk Deletion Scheduler</h1>
-                        <p className="text-slate-400 text-sm md:text-base mt-2 max-w-2xl leading-relaxed">
-                            Manage automated bulk storage cleanup tasks and scheduled jobs running via <span className="text-indigo-300 font-semibold">cron-job.org</span> REST API.
+                        <p className="text-slate-300 text-sm md:text-base mt-2 max-w-2xl leading-relaxed">
+                            Manage automated bulk storage cleanup tasks and scheduled jobs running via <span className="text-[#d4af37] font-semibold">cron-job.org</span> REST API.
                         </p>
                     </div>
 
@@ -439,14 +439,14 @@ export default function CronJobsPage() {
                         <button
                             onClick={fetchJobs}
                             disabled={isLoading}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-sm transition-all border border-slate-700"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm transition-all border border-white/10"
                         >
                             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
                             Refresh Jobs
                         </button>
                         <button
                             onClick={openCreateModal}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/30 active:scale-95"
+                            className="flex items-center gap-2 px-6 py-2.5 bg-[#d4af37] hover:bg-[#b89628] text-[#001c2b] rounded-xl font-bold text-sm transition-all shadow-md active:scale-95"
                         >
                             <Plus size={18} />
                             New Scheduler Job
@@ -457,7 +457,7 @@ export default function CronJobsPage() {
 
             {/* Error state */}
             {errorMsg && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between text-red-700 text-sm font-medium">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between text-[#d9381e] text-sm font-medium">
                     <div className="flex items-center gap-3">
                         <AlertCircle size={20} className="shrink-0" />
                         <span>{errorMsg}</span>
@@ -468,16 +468,16 @@ export default function CronJobsPage() {
 
             {/* Jobs Grid */}
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-slate-200 text-slate-400">
-                    <Loader2 className="animate-spin text-indigo-600 mb-4" size={40} />
+                <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-[#d0deea] text-slate-400">
+                    <Loader2 className="animate-spin text-[#002d42] mb-4" size={40} />
                     <p className="font-medium text-slate-500">Connecting to cron-job.org API...</p>
                 </div>
             ) : jobs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-dashed border-slate-200 text-center">
-                    <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4">
+                <div className="flex flex-col items-center justify-center p-16 bg-white rounded-3xl border border-dashed border-[#d0deea] text-center">
+                    <div className="w-16 h-16 bg-[#f0f6fa] text-[#002d42] rounded-2xl flex items-center justify-center mb-4">
                         <Clock size={32} />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800">No Cron Jobs Configured</h3>
+                    <h3 className="text-lg font-bold text-[#002d42]">No Cron Jobs Configured</h3>
                     <p className="text-slate-500 text-sm max-w-md mt-2">
                         You don't have any cron jobs set up in your cron-job.org account yet. Create your first job to schedule automatic storage cleanups.
                     </p>
