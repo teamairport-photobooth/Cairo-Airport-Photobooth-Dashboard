@@ -32,7 +32,7 @@ export default function DashboardPage() {
     const [images, setImages] = useState<CloudinaryImage[]>([]);
     const [loadingImages, setLoadingImages] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'logs'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'images'>('overview');
     const [origin, setOrigin] = useState('');
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -437,18 +437,6 @@ export default function DashboardPage() {
                 >
                     Generated Images
                 </button>
-                {user.role === UserRole.ADMIN && (
-                    <button
-                        onClick={() => setActiveTab('logs')}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                            activeTab === 'logs'
-                                ? 'bg-[#002d42] text-[#d4af37] shadow-md'
-                                : 'text-slate-600 hover:text-[#002d42] hover:bg-slate-50'
-                        }`}
-                    >
-                        API Logs
-                    </button>
-                )}
             </div>
 
             {/* Overview & Analytics Tab */}
@@ -724,51 +712,6 @@ export default function DashboardPage() {
                             </p>
                         </div>
                     )}
-                </div>
-            )}
-
-            {/* API Access Logs Tab */}
-            {user.role === UserRole.ADMIN && activeTab === 'logs' && (
-                <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <History className="text-indigo-500" />
-                            API Access & Usage Logs
-                        </h3>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">
-                            Real-time feed
-                        </span>
-                    </div>
-                    <div className="space-y-4">
-                        {logs.map(log => (
-                            <div key={log.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-emerald-500 border border-slate-100 shadow-sm group-hover:scale-110 transition-transform">
-                                        <Zap size={18} fill="currentColor" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-800">Image Generation Event (+{log.amount})</p>
-                                        <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()} • Successful API Call</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                                        HTTP 200 OK
-                                    </span>
-                                    <div className="h-4 w-[1px] bg-slate-200 hidden md:block" />
-                                    <span className="text-[10px] text-slate-400 font-mono hidden md:block">
-                                        ref: {log.id.split('-')[1] || log.id}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                        {logs.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-slate-300">
-                                <Activity size={48} className="opacity-20 mb-4" />
-                                <p className="font-medium">No generation logs recorded yet</p>
-                            </div>
-                        )}
-                    </div>
                 </div>
             )}
 

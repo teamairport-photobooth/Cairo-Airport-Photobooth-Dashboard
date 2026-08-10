@@ -705,16 +705,16 @@ export default function CronJobsPage() {
                             </div>
 
                             {/* Authorization Header / Secret Input */}
-                            <div>
+                            <div className="border border-red-200 bg-red-50/20 rounded-2xl p-4">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                                        <Lock size={12} className="text-indigo-600" />
+                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-1">
+                                        <Lock size={12} className="text-red-500" />
                                         Authorization Header Secret (CRON_SECRET)
                                     </label>
                                     <button
                                         type="button"
                                         onClick={() => setFormData(prev => ({ ...prev, secretHeader: defaultSecret }))}
-                                        className="text-[11px] font-bold text-indigo-600 hover:underline"
+                                        className="text-[11px] font-bold text-red-600 hover:underline"
                                     >
                                         Insert System Secret
                                     </button>
@@ -725,11 +725,11 @@ export default function CronJobsPage() {
                                         value={formData.secretHeader}
                                         onChange={e => setFormData({ ...formData, secretHeader: e.target.value })}
                                         placeholder="CRON_SECRET string..."
-                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                                        className="w-full px-4 py-2.5 border border-red-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-red-400/20 font-mono text-xs"
                                     />
                                 </div>
-                                <p className="text-[11px] text-slate-400 mt-1.5">
-                                    Sent as <code className="text-indigo-600 font-mono">Authorization: Bearer &lt;SECRET&gt;</code> HTTP header to authorize bulk deletion endpoint.
+                                <p className="text-[11px] text-slate-500 mt-1.5">
+                                    Sent as <code className="text-red-600 font-mono">Authorization: Bearer &lt;SECRET&gt;</code> HTTP header to authorize bulk deletion endpoint.
                                 </p>
                             </div>
 

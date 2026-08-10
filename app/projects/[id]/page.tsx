@@ -28,8 +28,6 @@ import {
     Search,
     Calendar,
     ArrowUpDown,
-    Star,
-    StarOff,
     X,
     Clock
 } from 'lucide-react';
@@ -48,13 +46,9 @@ export default function ProjectDetailPage() {
     const [loadingImages, setLoadingImages] = useState(false);
     const [copied, setCopied] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
-    const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'featured' | 'logs'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'images'>('overview');
     const [origin, setOrigin] = useState('');
     const [nextCursor, setNextCursor] = useState<string | null>(null);
-    const [featuredImages, setFeaturedImages] = useState<CloudinaryImage[]>([]);
-    const [loadingFeatured, setLoadingFeatured] = useState(false);
-    const [featuredCursor, setFeaturedCursor] = useState<string | null>(null);
-    const [loadingMoreFeatured, setLoadingMoreFeatured] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editForm, setEditForm] = useState({
@@ -62,7 +56,6 @@ export default function ProjectDetailPage() {
         description: '',
         cloudinaryTag: ''
     });
-    const [taggingId, setTaggingId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -266,47 +259,6 @@ export default function ProjectDetailPage() {
         }
     };
 
-    const fetchFeaturedImages = async (targetProj?: Project, isNext = false) => {
-        const p = targetProj || project;
-        if (!p) return;
-
-        if (isNext) {
-            setLoadingMoreFeatured(true);
-        } else {
-            setLoadingFeatured(true);
-            setFeaturedImages([]);
-            setFeaturedCursor(null);
-        }
-
-        try {
-            const queryParams = new URLSearchParams({
-                tag: 'Featured',
-                sort: sortOrder
-            });
-
-            const activeCursor = isNext ? featuredCursor : null;
-            if (activeCursor) {
-                queryParams.append('next_cursor', activeCursor);
-            }
-
-            const res = await fetch(`/api/cloudinary/images?${queryParams.toString()}`);
-            const data = await res.json();
-
-            if (res.ok) {
-                const newImgs = data.resources || [];
-                setFeaturedImages(prev => isNext ? [...prev, ...newImgs] : newImgs);
-                setFeaturedCursor(data.next_cursor || null);
-            } else {
-                console.error('Cloudinary Featured API error:', data.error);
-            }
-        } catch (err) {
-            console.error('Failed to fetch Cloudinary featured images:', err);
-        } finally {
-            setLoadingFeatured(false);
-            setLoadingMoreFeatured(false);
-        }
-    };
-
     const handleUpdateProject = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!project) return;
@@ -328,52 +280,6 @@ export default function ProjectDetailPage() {
         } catch (err) {
             console.error('Update error:', err);
             alert('Failed to update project');
-        }
-    };
-
-    const handleToggleTag = async (img: CloudinaryImage) => {
-        if (!project || taggingId) return;
-
-        const isFeatured = img.tags?.includes('Featured');
-        const action = isFeatured ? 'remove' : 'add';
-        const tag = 'Featured';
-
-        setTaggingId(img.public_id);
-        try {
-            const response = await fetch('/api/cloudinary/tags', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    public_id: img.public_id,
-                    tag,
-                    action
-                })
-            });
-
-            if (response.ok) {
-                setImages(prev => prev.map(i => {
-                    if (i.public_id === img.public_id) {
-                        const newTags = isFeatured
-                            ? (i.tags || []).filter(t => t !== tag)
-                            : [...(i.tags || []), tag];
-                        return { ...i, tags: newTags };
-                    }
-                    return i;
-                }));
-
-                if (isFeatured) {
-                    setFeaturedImages(prev => prev.filter(i => i.public_id !== img.public_id));
-                } else {
-                    setFeaturedImages(prev => [img, ...prev]);
-                }
-            } else {
-                alert('Failed to update image tag');
-            }
-        } catch (err) {
-            console.error('Error toggling tag:', err);
-            alert('An error occurred while updating tag');
-        } finally {
-            setTaggingId(null);
         }
     };
 
@@ -434,8 +340,7 @@ export default function ProjectDetailPage() {
     const handleBulkDownload = async () => {
         if (selectedIds.length === 0) return;
 
-        const currentImages = activeTab === 'featured' ? featuredImages : images;
-        const selectedImages = currentImages.filter(img => selectedIds.includes(img.public_id));
+        const selectedImages = images.filter(img => selectedIds.includes(img.public_id));
 
         for (const img of selectedImages) {
             const dateStr = new Date(img.created_at).toLocaleString(undefined, {
@@ -492,7 +397,6 @@ export default function ProjectDetailPage() {
             const data = await res.json();
             if (res.ok) {
                 setImages(prev => prev.filter(i => i.public_id !== img.public_id));
-                setFeaturedImages(prev => prev.filter(i => i.public_id !== img.public_id));
                 setSelectedIds(prev => prev.filter(id => id !== img.public_id));
             } else {
                 alert(data.error || 'Failed to delete image');
@@ -527,7 +431,6 @@ export default function ProjectDetailPage() {
             if (res.ok) {
                 const deletedSet = new Set(selectedIds);
                 setImages(prev => prev.filter(i => !deletedSet.has(i.public_id)));
-                setFeaturedImages(prev => prev.filter(i => !deletedSet.has(i.public_id)));
                 setSelectedIds([]);
             } else {
                 alert(data.error || 'Failed to delete selected images');
@@ -549,11 +452,10 @@ export default function ProjectDetailPage() {
     };
 
     const toggleSelectAll = () => {
-        const currentImages = activeTab === 'featured' ? featuredImages : images;
-        if (selectedIds.length === currentImages.length) {
+        if (selectedIds.length === images.length) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(currentImages.map(img => img.public_id));
+            setSelectedIds(images.map(img => img.public_id));
         }
     };
 
@@ -682,14 +584,6 @@ export default function ProjectDetailPage() {
                         >
                             Generated Images
                         </button>
-                        {user.role === UserRole.ADMIN && (
-                            <button
-                                onClick={() => setActiveTab('logs')}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'logs' ? 'bg-[#002d42] text-[#d4af37] shadow-md' : 'text-slate-600 hover:text-[#002d42]'}`}
-                            >
-                                API Logs
-                            </button>
-                        )}
                     </div>
                 </div>
 
@@ -956,23 +850,6 @@ export default function ProjectDetailPage() {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleToggleTag(img);
-                                                            }}
-                                                            disabled={taggingId === img.public_id}
-                                                            className={`p-1.5 rounded-lg transition-colors ${img.tags?.includes('Featured') ? 'bg-amber-500 text-white' : 'bg-white/20 text-white hover:bg-white/40'}`}
-                                                            title={img.tags?.includes('Featured') ? 'Remove from Featured' : 'Tag as Featured'}
-                                                        >
-                                                            {taggingId === img.public_id ? (
-                                                                <Loader2 size={14} className="animate-spin" />
-                                                            ) : img.tags?.includes('Featured') ? (
-                                                                <Star size={14} fill="currentColor" />
-                                                            ) : (
-                                                                <StarOff size={14} />
-                                                            )}
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
                                                                 const downloadUrl = img.secure_url || img.url || '';
                                                                 triggerDownload(downloadUrl, `${project?.name}_${img.public_id}.${img.format}`);
                                                             }}
@@ -1045,178 +922,6 @@ export default function ProjectDetailPage() {
                                 </p>
                             </div>
                         )}
-                    </div>
-                )}
-
-                {/* Featured Photos Tab */}
-                {activeTab === 'featured' && (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm min-h-[500px]">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                    <Zap className="text-amber-500" />
-                                    Featured Photos
-                                </h3>
-                                <p className="text-slate-500 text-sm mt-1">High-quality photos tagged for Featured</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {selectedIds.length > 0 && (
-                                    <button
-                                        onClick={() => setSelectedIds([])}
-                                        className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all"
-                                    >
-                                        Clear Selection
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                                    className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 text-sm font-bold transition-all"
-                                >
-                                    <ArrowUpDown size={16} className={sortOrder === 'asc' ? 'rotate-180 transition-transform' : 'transition-transform'} />
-                                    {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
-                                </button>
-                                <button
-                                    onClick={() => fetchFeaturedImages()}
-                                    className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-600 text-sm font-bold transition-all"
-                                >
-                                    <RefreshCw size={16} className={loadingFeatured ? 'animate-spin' : ''} />
-                                    Refresh
-                                </button>
-                            </div>
-                        </div>
-
-                        {loadingFeatured ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                                    <div key={n} className="aspect-square bg-slate-100 rounded-2xl animate-pulse" />
-                                ))}
-                            </div>
-                        ) : (featuredImages.length > 0 || featuredCursor) ? (
-                            <>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                    {featuredImages.map(img => (
-                                        <div
-                                            key={img.public_id}
-                                            onClick={() => toggleImageSelection(img.public_id)}
-                                            className={`group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer ${selectedIds.includes(img.public_id) ? 'border-indigo-600 shadow-xl' : 'border-transparent hover:border-indigo-200'}`}
-                                        >
-                                            <img
-                                                src={img.secure_url || img.url || ''}
-                                                alt={img.public_id}
-                                                className={`w-full h-full object-cover transition-transform duration-500 ${selectedIds.includes(img.public_id) ? 'scale-95 opacity-90' : 'group-hover:scale-110'}`}
-                                            />
-
-                                            <div className={`absolute top-3 right-3 z-20 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedIds.includes(img.public_id) ? 'bg-indigo-600 border-indigo-600 text-white active:scale-90' : 'bg-black/20 backdrop-blur-md border-white/50 opacity-0 group-hover:opacity-100'}`}>
-                                                {selectedIds.includes(img.public_id) && <Check size={16} />}
-                                            </div>
-
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
-                                                <p className="text-white text-[10px] font-bold truncate">
-                                                    {project.name} - {new Date(img.created_at).toLocaleString(undefined, {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
-                                                </p>
-                                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10">
-                                                    <span className="text-[10px] text-slate-300 uppercase tracking-widest">{img.format} • {img.width}x{img.height}</span>
-                                                    <div className="flex items-center gap-1">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleToggleTag(img);
-                                                            }}
-                                                            disabled={taggingId === img.public_id}
-                                                            className="p-1.5 bg-amber-500/80 backdrop-blur-md rounded-lg text-white hover:bg-amber-600 transition-colors disabled:opacity-50"
-                                                            title="Remove from Featured"
-                                                        >
-                                                            {taggingId === img.public_id ? <Loader2 size={14} className="animate-spin" /> : <Star size={14} fill="currentColor" />}
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const downloadUrl = img.secure_url || img.url || '';
-                                                                triggerDownload(downloadUrl, `${project?.name}_${img.public_id}.${img.format}`);
-                                                            }}
-                                                            className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                            title="Download Image"
-                                                        >
-                                                            <Download size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setInspectImage(img);
-                                                            }}
-                                                            className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg text-white hover:bg-white/40 transition-colors"
-                                                            title="View Details"
-                                                        >
-                                                            <Info size={14} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">
-                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-                                    <Zap size={32} />
-                                </div>
-                                <h4 className="text-lg font-bold text-slate-800">No Featured Photos</h4>
-                                <p className="text-slate-500 max-w-sm mt-2">
-                                    Photos tagged with <span className="font-bold">"Featured"</span> will appear here.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* API Access Logs Tab */}
-                {user.role === UserRole.ADMIN && activeTab === 'logs' && (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <History className="text-indigo-500" />
-                                API Access & Usage Logs
-                            </h3>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">
-                                Real-time feed
-                            </span>
-                        </div>
-                        <div className="space-y-4">
-                            {logs.map(log => (
-                                <div key={log.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-emerald-500 border border-slate-100 shadow-sm group-hover:scale-110 transition-transform">
-                                            <Zap size={18} fill="currentColor" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">Image Generation Event (+{log.amount})</p>
-                                            <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()} • Successful API Call</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                                            HTTP 200 OK
-                                        </span>
-                                        <div className="h-4 w-[1px] bg-slate-200 hidden md:block" />
-                                        <span className="text-[10px] text-slate-400 font-mono hidden md:block">
-                                            ref: {log.id.split('-')[1] || log.id}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                            {logs.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-300">
-                                    <Activity size={48} className="opacity-20 mb-4" />
-                                    <p className="font-medium">No generation logs recorded yet</p>
-                                </div>
-                            )}
-                        </div>
                     </div>
                 )}
             </div>

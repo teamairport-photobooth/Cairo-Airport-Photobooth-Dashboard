@@ -318,54 +318,56 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">API Key</label>
-                                        <div className="relative">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                                <Key size={18} />
+                                <div className="border border-red-200 bg-red-50/20 rounded-2xl p-5 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">API Key</label>
+                                            <div className="relative">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-red-400">
+                                                    <Key size={18} />
+                                                </div>
+                                                <input
+                                                    type={showFields.cloudinaryApiKey ? 'text' : 'password'}
+                                                    value={globalForm.cloudinaryApiKey}
+                                                    onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiKey: e.target.value })}
+                                                    className="w-full pl-12 pr-12 py-3 bg-white border border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-400/20 rounded-2xl outline-none transition-all font-mono text-sm"
+                                                    placeholder="API Key"
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleShow('cloudinaryApiKey')}
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors p-1"
+                                                    title={showFields.cloudinaryApiKey ? 'Hide credential' : 'Show credential'}
+                                                >
+                                                    {showFields.cloudinaryApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
                                             </div>
-                                            <input
-                                                type={showFields.cloudinaryApiKey ? 'text' : 'password'}
-                                                value={globalForm.cloudinaryApiKey}
-                                                onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiKey: e.target.value })}
-                                                className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
-                                                placeholder="API Key"
-                                                required
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleShow('cloudinaryApiKey')}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
-                                                title={showFields.cloudinaryApiKey ? 'Hide credential' : 'Show credential'}
-                                            >
-                                                {showFields.cloudinaryApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
                                         </div>
-                                    </div>
 
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">API Secret</label>
-                                        <div className="relative">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                                <ShieldCheck size={18} />
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">API Secret</label>
+                                            <div className="relative">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-red-400">
+                                                    <ShieldCheck size={18} />
+                                                </div>
+                                                <input
+                                                    type={showFields.cloudinaryApiSecret ? 'text' : 'password'}
+                                                    value={globalForm.cloudinaryApiSecret}
+                                                    onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiSecret: e.target.value })}
+                                                    className="w-full pl-12 pr-12 py-3 bg-white border border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-400/20 rounded-2xl outline-none transition-all font-mono text-sm"
+                                                    placeholder="••••••••••••••••"
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleShow('cloudinaryApiSecret')}
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors p-1"
+                                                    title={showFields.cloudinaryApiSecret ? 'Hide credential' : 'Show credential'}
+                                                >
+                                                    {showFields.cloudinaryApiSecret ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
                                             </div>
-                                            <input
-                                                type={showFields.cloudinaryApiSecret ? 'text' : 'password'}
-                                                value={globalForm.cloudinaryApiSecret}
-                                                onChange={e => setGlobalForm({ ...globalForm, cloudinaryApiSecret: e.target.value })}
-                                                className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
-                                                placeholder="••••••••••••••••"
-                                                required
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleShow('cloudinaryApiSecret')}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
-                                                title={showFields.cloudinaryApiSecret ? 'Hide credential' : 'Show credential'}
-                                            >
-                                                {showFields.cloudinaryApiSecret ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -387,51 +389,53 @@ export default function SettingsPage() {
                             </div>
 
                             <div className="p-8 space-y-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cleanup Scheduler API Key</label>
-                                    <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                            <Key size={18} />
+                                <div className="border border-red-200 bg-red-50/20 rounded-2xl p-5 space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Cleanup Scheduler API Key</label>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-red-400">
+                                                <Key size={18} />
+                                            </div>
+                                            <input
+                                                type={showFields.cronJobsApiKey ? 'text' : 'password'}
+                                                value={globalForm.cronJobsApiKey}
+                                                onChange={e => setGlobalForm({ ...globalForm, cronJobsApiKey: e.target.value })}
+                                                className="w-full pl-12 pr-12 py-3 bg-white border border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-400/20 rounded-2xl outline-none transition-all font-mono text-sm"
+                                                placeholder="API Key for scheduled cleanup triggers..."
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleShow('cronJobsApiKey')}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors p-1"
+                                                title={showFields.cronJobsApiKey ? 'Hide credential' : 'Show credential'}
+                                            >
+                                                {showFields.cronJobsApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
-                                        <input
-                                            type={showFields.cronJobsApiKey ? 'text' : 'password'}
-                                            value={globalForm.cronJobsApiKey}
-                                            onChange={e => setGlobalForm({ ...globalForm, cronJobsApiKey: e.target.value })}
-                                            className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
-                                            placeholder="API Key for scheduled cleanup triggers..."
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleShow('cronJobsApiKey')}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
-                                            title={showFields.cronJobsApiKey ? 'Hide credential' : 'Show credential'}
-                                        >
-                                            {showFields.cronJobsApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cleanup Authorization Secret</label>
-                                    <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                            <Lock size={18} />
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Cleanup Authorization Secret</label>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-red-400">
+                                                <Lock size={18} />
+                                            </div>
+                                            <input
+                                                type={showFields.cronSecret ? 'text' : 'password'}
+                                                value={globalForm.cronSecret}
+                                                onChange={e => setGlobalForm({ ...globalForm, cronSecret: e.target.value })}
+                                                className="w-full pl-12 pr-12 py-3 bg-white border border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-400/20 rounded-2xl outline-none transition-all font-mono text-sm"
+                                                placeholder="Secret phrase for cleanup verification..."
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleShow('cronSecret')}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition-colors p-1"
+                                                title={showFields.cronSecret ? 'Hide credential' : 'Show credential'}
+                                            >
+                                                {showFields.cronSecret ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
-                                        <input
-                                            type={showFields.cronSecret ? 'text' : 'password'}
-                                            value={globalForm.cronSecret}
-                                            onChange={e => setGlobalForm({ ...globalForm, cronSecret: e.target.value })}
-                                            className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#002d42] outline-none transition-all font-mono text-sm"
-                                            placeholder="Secret phrase for cleanup verification..."
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleShow('cronSecret')}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#002d42] transition-colors p-1"
-                                            title={showFields.cronSecret ? 'Hide credential' : 'Show credential'}
-                                        >
-                                            {showFields.cronSecret ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
                                     </div>
                                 </div>
                             </div>
