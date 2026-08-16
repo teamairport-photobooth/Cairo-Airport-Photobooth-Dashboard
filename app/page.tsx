@@ -93,30 +93,55 @@ export default function DashboardPage() {
                 // Fetch Usage Logs
                 let beginDate: Date;
                 let finalDate: Date = new Date();
+                finalDate.setHours(23, 59, 59, 999);
 
                 if (timeRange === 'custom') {
-                    beginDate = new Date(customRange.start);
-                    finalDate = new Date(customRange.end);
-                    finalDate.setHours(23, 59, 59, 999);
+                    const [sYear, sMonth, sDay] = customRange.start.split('-').map(Number);
+                    const [eYear, eMonth, eDay] = customRange.end.split('-').map(Number);
+                    beginDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
+                    finalDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
                 } else {
                     beginDate = new Date();
-                    beginDate.setDate(beginDate.getDate() - timeRange);
+                    beginDate.setHours(0, 0, 0, 0);
+                    beginDate.setDate(beginDate.getDate() - (Number(timeRange) - 1));
                 }
 
-                const { data: logsData } = await supabase
-                    .from('usage_logs')
-                    .select('*')
-                    .eq('project_id', p.id)
-                    .gte('timestamp', beginDate.toISOString())
-                    .lte('timestamp', finalDate.toISOString())
-                    .order('timestamp', { ascending: false });
+                const allLogs: UsageLog[] = [];
+                let page = 0;
+                const pageSize = 1000;
+                let hasMore = true;
 
-                setLogs((logsData || []).map(l => ({
-                    id: l.id,
-                    projectId: l.project_id,
-                    timestamp: l.timestamp,
-                    amount: l.amount
-                })));
+                while (hasMore) {
+                    const { data: logsData, error: logsError } = await supabase
+                        .from('usage_logs')
+                        .select('id, project_id, timestamp, amount')
+                        .eq('project_id', p.id)
+                        .gte('timestamp', beginDate.toISOString())
+                        .lte('timestamp', finalDate.toISOString())
+                        .order('timestamp', { ascending: false })
+                        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+                    if (logsError) throw logsError;
+
+                    if (logsData && logsData.length > 0) {
+                        allLogs.push(...logsData.map(l => ({
+                            id: l.id,
+                            projectId: l.project_id,
+                            timestamp: l.timestamp,
+                            amount: l.amount
+                        })));
+
+                        if (logsData.length < pageSize) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                setLogs(allLogs);
 
                 fetchImages('', mapped, false);
             } else {
@@ -311,24 +336,33 @@ export default function DashboardPage() {
     const chartData = useMemo(() => {
         const lastDays: { name: string; dateStr: string; count: number }[] = [];
 
+        const formatLocalDate = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         let start: Date;
-        let end: Date = new Date();
         let daysCount: number;
 
         if (timeRange === 'custom') {
-            start = new Date(customRange.start);
-            end = new Date(customRange.end);
-            daysCount = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+            const [sYear, sMonth, sDay] = customRange.start.split('-').map(Number);
+            const [eYear, eMonth, eDay] = customRange.end.split('-').map(Number);
+            start = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
+            const end = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
+            daysCount = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
         } else {
-            daysCount = timeRange as number;
+            daysCount = Number(timeRange);
             start = new Date();
+            start.setHours(0, 0, 0, 0);
             start.setDate(start.getDate() - (daysCount - 1));
         }
 
         for (let i = 0; i < daysCount; i++) {
             const d = new Date(start);
             d.setDate(d.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = formatLocalDate(d);
 
             let label = d.toLocaleDateString(undefined, { weekday: 'short' });
             if (daysCount > 14) {
@@ -343,10 +377,10 @@ export default function DashboardPage() {
         }
 
         logs.forEach(log => {
-            const logDate = log.timestamp.split('T')[0];
+            const logDate = formatLocalDate(new Date(log.timestamp));
             const dayEntry = lastDays.find(d => d.dateStr === logDate);
             if (dayEntry) {
-                dayEntry.count += log.amount;
+                dayEntry.count += (log.amount || 1);
             }
         });
 
